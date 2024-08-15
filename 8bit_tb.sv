@@ -1,30 +1,49 @@
-`default_nettype none
-
 module eightbit_tb();
 
 reg [7:0] mem [0:255];
 reg clk;
+reg [7:0] addr, data_out, data_in;
+reg we;
 
-eightbit eb(.mem(mem), .clk(clk));
+eightbit eb(
+    .clk(clk),
+    .addr(addr),
+    .data_in(data_out),
+    .data_out(data_in),
+    .we(we)
+    );
 
-initial begin
-    mem[8'hfe] = 8'h01;
-    mem[8'hff] = 8'h01;
+    task pulseClk;
+        #1 clk = ~clk;
+    endtask
 
-    mem[8'h00] = 8'h01;
-    mem[8'h01] = 8'hfe;
-    mem[8'h02] = 8'h06;
-    mem[8'h03] = 8'h01;
-    mem[8'h04] = 8'hff;
-    mem[8'h05] = 8'h10;
-    mem[8'h06] = 8'h02;
-    mem[8'h07] = 8'hff;
+    integer i;
+    initial begin
+        mem[8'hfe] = 8'h01;
+        mem[8'hff] = 8'h01;
 
-    $dumpfile("8bit.vcd");
-    $dumpvars(0, eightbit_tb);
-    clk = 0;
+        mem[8'h00] = 8'h01;
+        mem[8'h01] = 8'hfe;
+        mem[8'h02] = 8'h06;
+        mem[8'h03] = 8'h01;
+        mem[8'h04] = 8'hff;
+        mem[8'h05] = 8'h10;
+        mem[8'h06] = 8'h02;
+        mem[8'h07] = 8'hff;
 
-    forever #1 clk = ~clk;
-end
+        $dumpfile("8bit.vcd");
+        $dumpvars(0, eightbit_tb);
+        $dumpvars(0, mem[255]);
+        clk = 0;
 
-endmodule;
+        for (i = 0; i < 400; i = i + 1)
+            pulseClk();
+    end
+
+    always @(posedge clk) begin
+        if (we)
+            mem[addr] = data_in;
+        data_out = mem[addr];
+    end
+
+    endmodule;
