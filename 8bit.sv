@@ -8,31 +8,29 @@ module eightbit(
     output reg we
     );
 
-    reg [7:0] a, b, pc, inst, pipe;
+    reg [7:0] a, b, pc, inst;
+    reg [2:0] pipe;
 
     initial begin
         a = 8'h00;
         b = 8'h00;
         pc = 8'h00;
         inst = 8'h00;
-        pipe = 8'h00;
+        pipe = 3'h0;
         we = 1'b0;
         addr = pc;
     end
 
     always @ (posedge clk) begin
         case (pipe)
-            8'h00: begin
+            3'h0: begin
                 inst = data_in;
-                pipe = 8'h01;
+                pipe = 3'h1;
             end
-            8'h01: begin
+            3'h1: begin
                 case (inst)
                     // Move word at address in pc + 0x01 to a
-                    8'h01: begin
-                        addr[7:0] = pc[7:0] + 8'h01;
-                        we = 0;
-                    end
+                    8'h01: addr[7:0] = pc[7:0] + 8'h01;
 
                     // Move a to address at pc + 0x01
                     8'h02: begin
@@ -63,16 +61,29 @@ module eightbit(
 
                     default: ;
                 endcase
-                pipe = 8'h02;
+                pipe = 3'h2;
             end
-            8'h02: begin
+            3'h2: begin
                 // Move word at pc + 0x01 to a
-                if (inst[7:0] == 8'h01)
-                    a[7:0] = data_in[7:0];
+                if (inst[7:0] == 8'h01) begin
+                    addr[7:0] = data_in[7:0];
+                    pipe[2:0] = 3'h3;
+                end else begin
+                    if (inst[7:0] == 8'h02)
+                        pc[7:0] = pc[7:0] + 8'h01;
 
-                pipe[7:0] = 8'b00;
-                we = 0;
-                pc[7:0] = pc[7:0] + 8'h01;
+                    pipe[2:0] = 2'b0;
+                    we = 0;
+                    pc[7:0] = pc[7:0] + 8'h01;
+                end
+            end
+            3'h3: begin
+                a[7:0] = data_in[7:0];
+                pipe = 3'h4;
+            end
+            3'h4: begin
+                pipe = 3'h0;
+                pc[7:0] = pc[7:0] + 8'h02;
             end
         endcase
     end
