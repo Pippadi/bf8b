@@ -25,12 +25,12 @@ module eightbit(
         case (pipe)
             3'h0: begin
                 inst = data_in;
-                pipe = 3'h1;
+                pipe <= 3'h1;
             end
             3'h1: begin
                 case (inst)
                     // Move word at address in pc + 0x01 to a
-                    8'h01: addr[7:0] = pc[7:0] + 8'h01;
+                    8'h01: addr[7:0] <= pc[7:0] + 8'h01;
 
                     // Move a to address at pc + 0x01
                     8'h02: begin
@@ -66,23 +66,23 @@ module eightbit(
             3'h2: begin
                 // Move word at pc + 0x01 to a
                 if (inst[7:0] == 8'h01) begin
-                    addr[7:0] = data_in[7:0];
-                    pipe[2:0] = 3'h3;
+                    addr[7:0] <= data_in[7:0];
+                    pipe[2:0] <= 3'h3;
                 end else begin
                     if (inst[7:0] == 8'h02)
                         pc[7:0] = pc[7:0] + 8'h01;
 
-                    pipe[2:0] = 2'b0;
+                    pipe[2:0] <= 2'b0;
                     we = 0;
                     pc[7:0] = pc[7:0] + 8'h01;
                 end
             end
             3'h3: begin
-                a[7:0] = data_in[7:0];
-                pipe = 3'h4;
+                pipe <= 3'h4;
             end
             3'h4: begin
-                pipe = 3'h0;
+                a[7:0] = data_in[7:0];
+                pipe <= 3'h0;
                 pc[7:0] = pc[7:0] + 8'h02;
             end
         endcase

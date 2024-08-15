@@ -20,8 +20,8 @@ eightbit eb(
     integer i;
     initial begin
         // load 1s into memory
-        mem[8'hfe] = 8'h01;
-        mem[8'hff] = 8'h01;
+        mem[8'hfe] = 8'h03;
+        mem[8'hff] = 8'h05;
 
         // Load 1 at 0xfe into a
         mem[8'h00] = 8'h01;
