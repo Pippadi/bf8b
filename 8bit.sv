@@ -24,8 +24,8 @@ module eightbit(
     always @ (posedge clk) begin
         case (pipe)
             3'h0: begin
-                inst = data_in;
                 pipe <= 3'h1;
+                inst <= data_in;
             end
             3'h1: begin
                 case (inst)
@@ -75,6 +75,7 @@ module eightbit(
                     pipe[2:0] <= 2'b0;
                     we = 0;
                     pc[7:0] = pc[7:0] + 8'h01;
+                    addr = pc;
                 end
             end
             3'h3: begin
@@ -84,6 +85,7 @@ module eightbit(
                 a[7:0] = data_in[7:0];
                 pipe <= 3'h0;
                 pc[7:0] = pc[7:0] + 8'h02;
+                addr = pc;
             end
         endcase
     end

@@ -19,16 +19,16 @@ eightbit eb(
 
     integer i;
     initial begin
-        // load 1s into memory
+        // load addends into memory
         mem[8'hfe] = 8'h03;
         mem[8'hff] = 8'h05;
 
-        // Load 1 at 0xfe into a
+        // Load 3 at 0xfe into a
         mem[8'h00] = 8'h01;
         mem[8'h01] = 8'hfe;
         // Move a to b
         mem[8'h02] = 8'h06;
-        // Load 1 at 0xff into a
+        // Load 5 at 0xff into a
         mem[8'h03] = 8'h01;
         mem[8'h04] = 8'hff;
         // Add a and b
