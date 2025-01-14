@@ -25,4 +25,8 @@ initial begin
     fetch_en = 1;
 end
 
+always @ (posedge fetch_ready) begin
+    fetch_en = 0;
+end
+
 endmodule

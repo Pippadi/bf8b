@@ -22,10 +22,12 @@ always @ (posedge clk) begin
                 addr <= pc;
                 stage <= 1;
             end
-            2'b01: begin
+            2'b01: stage <= 2;
+            2'b10: begin
+                $display("fetch: %h", data_in);
                 inst_out <= data_in;
                 fetch_ready <= 1;
-                stage <= 2;
+                stage <= 3;
             end
             default: fetch_ready <= fetch_ready;
         endcase
