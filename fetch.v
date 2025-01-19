@@ -5,14 +5,14 @@ module fetch(
     input [7:0] pc,
     output reg [7:0] addr,
     output reg [7:0] inst_out,
-    output reg fetch_ready
+    output reg ready
 );
 
 reg [1:0] stage;
 
 always @ (posedge fetch_en) begin
     stage <= 0;
-    fetch_ready <= 0;
+    ready <= 0;
 end
 
 always @ (posedge clk) begin
@@ -26,10 +26,10 @@ always @ (posedge clk) begin
             2'b10: begin
                 $display("fetch: %h", data_in);
                 inst_out <= data_in;
-                fetch_ready <= 1;
+                ready <= 1;
                 stage <= 3;
             end
-            default: fetch_ready <= fetch_ready;
+            default: ready <= ready;
         endcase
     end
 end
