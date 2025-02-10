@@ -9,12 +9,9 @@ module eightbit(
 );
 
 reg [7:0] a, b, pc, inst;
-reg fetch_en, fetch_ready;
-reg decode_ready;
 
-reg [7:0] decode_addr;
+reg fetch_en, fetch_ready;
 reg [7:0] fetch_addr;
-reg [7:0] decode_pc;
 reg [7:0] fetch_pc;
 
 fetch Fetch (
@@ -27,17 +24,18 @@ fetch Fetch (
     .ready(fetch_ready)
 );
 
-decode_exec Exec (
+reg decode_ready;
+reg [5:0] decode_addr;
+reg [1:0] decode_inst_type;
+reg decode_srcdst;
+
+decode Decode (
     .en(fetch_ready),
     .clk(clk),
     .inst(inst),
-    .data_in(data_in),
-    .pc(decode_pc),
-    .a(a),
-    .b(b),
+    .inst_type(decode_inst_type),
     .addr(decode_addr),
-    .data_out(data_out),
-    .we(we),
+    .srcdst(decode_srcdst),
     .ready(decode_ready)
 );
 
@@ -55,10 +53,6 @@ always @ (posedge clk) begin
     if (fetch_en) begin
         addr <= fetch_addr;
         pc <= fetch_pc;
-    end
-    else begin
-        addr <= decode_addr;
-        pc <= decode_pc;
     end
 end
 

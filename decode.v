@@ -1,65 +1,36 @@
-module decode_exec(
+module decode(
     input en,
     input clk,
     input [7:0] inst,
-    input [7:0] data_in,
-    output reg [7:0] pc,
-    output reg [7:0] a,
-    output reg [7:0] b,
-    output reg [7:0] addr,
-    output reg [7:0] data_out,
-    output reg we,
+    output reg [1:0] inst_type,
+    output reg srcdst,
+    output reg [5:0] addr,
     output reg ready
 );
 
-reg jump_en, jump_ready;
-
-jump Jump (
-    .en(jump_en),
-    .clk(clk),
-    .inst(inst),
-    .pc(pc)
-);
-
 always @ (posedge en) begin
-    ready <= 1'b0;
+    ready = 0;
 end
 
 always @ (posedge clk) begin
     if (en) begin
-        a = a;
-        b = b;
-        we = 0;
-        addr = addr;
-        data_out = data_out;
-
-        if (~ready) begin
-            case (inst[7:6])
-                2'b00: begin
-                    jump_en = 1;
-                end
-            endcase
-        end else begin
-            jump_en = 0;
-        end
-    end
-end
-
-endmodule
-
-module jump (
-    input en,
-    input clk,
-    input [7:0] inst,
-    output reg [7:0] pc
-);
-
-always @ (posedge en)
-    pc <= {2'b00, inst[5:0]};
-
-always @ (posedge clk) begin
-    if (~en) begin
-        pc <= pc;
+        inst_type = inst[7:6];
+        case (inst_type)
+            2'b00: addr = inst[5:0];
+            2'b01: begin
+                addr = inst[4:0];
+                srcdst = inst[5];
+            end
+            2'b10: begin
+                addr = inst[4:0];
+                srcdst = inst[5];
+            end
+            2'b11: begin
+                addr = 0;
+                srcdst = 0;
+            end
+        endcase
+        ready = 1;
     end
 end
 
