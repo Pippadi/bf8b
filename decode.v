@@ -18,11 +18,11 @@ always @ (posedge clk) begin
         case (inst_type)
             2'b00: addr = inst[5:0];
             2'b01: begin
-                addr = inst[4:0];
+                addr = {1'b0, inst[4:0]};
                 srcdst = inst[5];
             end
             2'b10: begin
-                addr = inst[4:0];
+                addr = {1'b0, inst[4:0]};
                 srcdst = inst[5];
             end
             2'b11: begin

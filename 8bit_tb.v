@@ -21,14 +21,16 @@ endtask
 integer i;
 initial begin
     // Load jump instruction
-    mem[0] = 8'b00000101;
+    mem[8'h00] = 8'b00000101;
+    mem[8'h05] = 8'b01100000;
+    mem[8'hE0] = 8'hFF;
 
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
-    $dumpvars(0, mem[255]);
+    $dumpvars(0, mem[8'hE0]);
     clk = 0;
 
-    for (i = 0; i < 4; i = i + 1)
+    for (i = 0; i < 16; i = i + 1)
         pulseClk();
 end
 
