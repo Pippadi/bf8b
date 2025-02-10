@@ -54,6 +54,21 @@ always @ (posedge clk) begin
         addr <= fetch_addr;
         pc <= fetch_pc;
     end
+
+    if (decode_ready) begin
+        case (decode_inst_type)
+            2'b00: begin
+                pc <= {2'b00, decode_addr};
+                fetch_en <= 1;
+            end
+            2'b01: begin
+            end
+            2'b10: begin
+            end
+            2'b11: begin
+            end
+        endcase
+    end
 end
 
 endmodule
