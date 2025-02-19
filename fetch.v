@@ -1,5 +1,5 @@
 module fetch(
-    input fetch_en,
+    input en,
     input clk,
     input [7:0] data_in,
     input [7:0] pc,
@@ -10,13 +10,13 @@ module fetch(
 
 reg [1:0] stage;
 
-always @ (posedge fetch_en) begin
+always @ (posedge en) begin
     stage <= 0;
     ready <= 0;
 end
 
 always @ (posedge clk) begin
-    if (fetch_en) begin
+    if (en) begin
         case (stage)
             2'b00: begin
                 addr <= pc;

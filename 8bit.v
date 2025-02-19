@@ -10,11 +10,13 @@ module eightbit(
 
 reg [7:0] a, b, pc, inst;
 
+reg pipeline_flush;
+
 reg fetch_en, fetch_ready;
 reg [7:0] fetch_addr;
 
 fetch Fetch (
-    .fetch_en(fetch_en),
+    .en(fetch_en),
     .clk(clk),
     .data_in(data_in),
     .pc(pc),
@@ -30,6 +32,7 @@ reg decode_srcdst;
 
 decode Decode (
     .en(fetch_ready),
+    .rst(pipeline_flush),
     .clk(clk),
     .inst(inst),
     .inst_type(decode_inst_type),
@@ -49,6 +52,7 @@ reg exec_we;
 
 exec Execute (
     .en(exec_en),
+    .rst(pipeline_flush),
     .clk(clk),
     .op(decode_inst_type),
     .val1(exec_val1_in),
@@ -65,11 +69,13 @@ exec Execute (
 initial begin
     pc = 8'h00;
     fetch_en = 1;
+    pipeline_flush = 0;
     exec_en = 0;
 end
 
 always @ (posedge fetch_ready) begin
     fetch_en = 0;
+    pipeline_flush = 0;
 end
 
 always @ (posedge clk) begin
@@ -82,7 +88,7 @@ always @ (posedge clk) begin
             2'b00: begin
                 pc <= {2'b00, decode_addr};
                 fetch_en <= 1;
-                // Flush pipeline
+                pipeline_flush = 1;
             end
             2'b01: begin
                 exec_en <= 1;
