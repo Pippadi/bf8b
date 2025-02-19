@@ -127,6 +127,9 @@ always @ (posedge clk) begin
                 exec_val1_in <= (decode_srcdst) ? a : b;
                 exec_en <= 1;
             end
+            2'b11: begin
+                exec_en <= 1;
+            end
         endcase
     end
 

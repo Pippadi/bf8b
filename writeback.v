@@ -15,7 +15,7 @@ end
 
 always @ (posedge clk) begin
     if (en) begin
-        if (op == 2'b01) begin
+        if (op == 2'b01 || op == 2'b11) begin
             if (srcdst) begin
                 a <= val;
             end

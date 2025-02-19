@@ -53,6 +53,10 @@ always @ (posedge clk) begin
             else
                 stage <= 2'b01;
         end
+        2'b11: begin
+            val_out <= val1 + val2;
+            ready <= 1;
+        end
     endcase
 end
 

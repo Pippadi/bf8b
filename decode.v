@@ -28,7 +28,7 @@ always @ (posedge clk) begin
             end
             2'b11: begin
                 addr = 0;
-                srcdst = 0;
+                srcdst = inst[5];
             end
         endcase
         ready = 1;
