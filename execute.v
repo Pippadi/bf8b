@@ -1,6 +1,5 @@
 module exec(
     input en,
-    input rst,
     input clk,
     input [1:0] op,
     input [7:0] val1,
@@ -16,7 +15,7 @@ module exec(
 
 reg [1:0] stage;
 
-always @ (posedge rst) begin
+always @ (negedge en) begin
     ready <= 0;
 end
 

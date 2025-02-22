@@ -9,7 +9,7 @@ module writeback(
     output reg ready
 );
 
-always @ (posedge en) begin
+always @ (posedge en or negedge en) begin
     ready <= 0;
 end
 
@@ -17,10 +17,10 @@ always @ (posedge clk) begin
     if (en) begin
         if (op == 2'b01 || op == 2'b11) begin
             if (srcdst) begin
-                a <= val;
+                b <= val;
             end
             else begin
-                b <= val;
+                a <= val;
             end
             ready <= 1;
         end

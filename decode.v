@@ -1,6 +1,5 @@
 module decode(
     input en,
-    input rst,
     input clk,
     input [7:0] inst,
     output reg [1:0] inst_type,
@@ -9,7 +8,7 @@ module decode(
     output reg ready
 );
 
-always @ (posedge en or posedge rst) begin
+always @ (posedge en or negedge en) begin
     ready = 0;
 end
 

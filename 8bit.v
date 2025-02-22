@@ -10,8 +10,6 @@ module eightbit(
 
 reg [7:0] a, b, pc, inst;
 
-reg pipeline_flush;
-
 reg fetch_en, fetch_ready;
 reg [7:0] fetch_addr;
 
@@ -25,16 +23,16 @@ fetch Fetch (
     .ready(fetch_ready)
 );
 
-reg decode_ready;
+reg decode_ready, decode_en;
+reg [7:0] decode_inst;
 reg [5:0] decode_addr;
 reg [1:0] decode_inst_type;
 reg decode_srcdst;
 
 decode Decode (
-    .en(fetch_ready),
-    .rst(pipeline_flush),
+    .en(decode_en),
     .clk(clk),
-    .inst(inst),
+    .inst(decode_inst),
     .inst_type(decode_inst_type),
     .addr(decode_addr),
     .srcdst(decode_srcdst),
@@ -50,11 +48,11 @@ reg [7:0] exec_val2_in;
 reg [7:0] exec_val_out;
 reg [7:0] exec_addr;
 reg [7:0] exec_data_out;
+reg exec_srcdst;
 reg exec_we;
 
 exec Execute (
     .en(exec_en),
-    .rst(pipeline_flush),
     .clk(clk),
     .op(exec_op),
     .val1(exec_val1_in),
@@ -85,23 +83,23 @@ writeback Writeback(
 initial begin
     pc = 8'h00;
     fetch_en = 1;
-    pipeline_flush = 0;
+    decode_en = 0;
     exec_en = 0;
 end
 
 always @ (posedge fetch_ready) begin
-    fetch_en = 0;
-    pipeline_flush = 0;
+    fetch_en <= 0;
 end
 
 always @ (posedge exec_ready) begin
     exec_en <= 0;
-    wb_en <= 1;
     wb_op <= exec_op;
+    wb_srcdst <= exec_srcdst;
+    wb_en <= 1;
 end
 
 always @ (posedge wb_ready) begin
-    wb_en = 0;
+    wb_en <= 0;
 end
 
 always @ (posedge clk) begin
@@ -109,16 +107,24 @@ always @ (posedge clk) begin
         addr <= fetch_addr;
     end
 
+    if (fetch_ready & ~decode_en) begin
+        decode_inst <= inst;
+        decode_en <= 1;
+        pc <= pc + 1;
+        fetch_en <= 1;
+    end
+
     if (decode_ready & ~exec_en & ~fetch_en) begin
         exec_op <= decode_inst_type;
         exec_addr_in <= decode_addr[4:0];
-        wb_srcdst <= decode_srcdst;
+        exec_srcdst <= decode_srcdst;
 
         case (decode_inst_type)
             2'b00: begin
                 pc <= {2'b00, decode_addr};
                 fetch_en <= 1;
-                pipeline_flush = 1;
+                decode_en <= 0;
+                exec_en <= 0;
             end
             2'b01: begin
                 exec_en <= 1;
