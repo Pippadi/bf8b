@@ -9,7 +9,7 @@ module decode(
 );
 
 always @ (posedge en or negedge en) begin
-    ready = 0;
+    ready <= 0;
 end
 
 always @ (posedge clk) begin

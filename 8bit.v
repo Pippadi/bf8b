@@ -1,5 +1,3 @@
-`default_nettype none
-
 module eightbit(
     input clk,
     input [7:0] data_in,
@@ -85,17 +83,7 @@ initial begin
     fetch_en = 1;
     decode_en = 0;
     exec_en = 0;
-end
-
-always @ (posedge fetch_ready) begin
-    fetch_en <= 0;
-end
-
-always @ (posedge exec_ready) begin
-    exec_en <= 0;
-    wb_op <= exec_op;
-    wb_srcdst <= exec_srcdst;
-    wb_en <= 1;
+    wb_en = 0;
 end
 
 always @ (posedge wb_ready) begin
@@ -103,26 +91,29 @@ always @ (posedge wb_ready) begin
 end
 
 always @ (posedge clk) begin
+    if (fetch_ready & ~decode_en) begin
+        decode_inst <= inst;
+        decode_en <= 1;
+        fetch_en <= 0;
+        pc <= pc + 1;
+    end
+    if (~fetch_ready & ~(exec_en & ~exec_ready)) begin
+        fetch_en <= 1;
+    end
     if (fetch_en) begin
         addr <= fetch_addr;
     end
 
-    if (fetch_ready & ~decode_en) begin
-        decode_inst <= inst;
-        decode_en <= 1;
-        pc <= pc + 1;
-        fetch_en <= 1;
-    end
-
-    if (decode_ready & ~exec_en & ~fetch_en) begin
+    if (decode_ready & ~exec_en & ~(fetch_en & ~fetch_ready)) begin
         exec_op <= decode_inst_type;
         exec_addr_in <= decode_addr[4:0];
         exec_srcdst <= decode_srcdst;
+        decode_en <= 0;
 
         case (decode_inst_type)
             2'b00: begin
                 pc <= {2'b00, decode_addr};
-                fetch_en <= 1;
+                fetch_en <= 0;
                 decode_en <= 0;
                 exec_en <= 0;
             end
@@ -138,11 +129,17 @@ always @ (posedge clk) begin
             end
         endcase
     end
-
     if (exec_en) begin
         addr <= exec_addr;
         we <= exec_we;
         data_out <= exec_data_out;
+    end
+
+    if (exec_ready & ~wb_en) begin
+        wb_op <= exec_op;
+        wb_srcdst <= exec_srcdst;
+        wb_en <= 1;
+        exec_en <= 0;
     end
 end
 

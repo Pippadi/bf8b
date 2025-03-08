@@ -15,6 +15,10 @@ always @ (posedge en) begin
     ready <= 0;
 end
 
+always @ (negedge en) begin
+    ready <= 0;
+end
+
 always @ (posedge clk) begin
     if (en) begin
         case (stage)
@@ -29,8 +33,8 @@ always @ (posedge clk) begin
             end
             2'b11: begin
                 $display("fetch: %h", data_in);
-            ready <= 1;
-        end
+                ready <= 1;
+            end
             default: ready <= ready;
         endcase
     end

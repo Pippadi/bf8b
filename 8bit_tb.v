@@ -2,20 +2,23 @@ module eightbit_tb();
 
 reg [7:0] mem [0:255];
 reg clk;
-reg [7:0] addr, data_out, data_in;
+wire [7:0] addr;
+reg [7:0] mem_data_out;
+wire [7:0] mem_data_in;
 wire we;
 
 eightbit eb(
     .clk(clk),
     .addr(addr),
-    .data_in(data_out),
-    .data_out(data_in),
+    .data_in(mem_data_out),
+    .data_out(mem_data_in),
     .we(we)
 );
 
-task pulseClk;
+task pulseClk; begin
     #0.5 clk = ~clk;
     #0.5 clk = ~clk;
+end
 endtask
 
 integer i;
@@ -39,14 +42,14 @@ initial begin
     $dumpvars(0, mem[8'hE0]);
     clk = 0;
 
-    for (i = 0; i < 32; i = i + 1)
+    for (i = 0; i < 48; i = i + 1)
         pulseClk();
 end
 
 always @(posedge clk) begin
     if (we)
-        mem[addr] = data_in;
-    data_out = mem[addr];
+        mem[addr] = mem_data_in;
+    mem_data_out = mem[addr];
 end
 
 endmodule;
