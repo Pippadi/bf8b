@@ -1,8 +1,9 @@
 `define STATE_IDLE 2'b00
 `define STATE_BUSY 2'b10
-`define STATE_COMPLETE 2'b01
+`define STATE_COMPLETE 2'b11
 
 module eightbit(
+    input rst,
     input clk,
     input [7:0] data_in,
     output reg [7:0] addr,
@@ -94,61 +95,63 @@ writeback Writeback(
     .ready(wb_ready)
 );
 
-initial begin
+always @ (posedge rst) begin
     pc = 8'h00;
-    fetch_en = 1;
+    fetch_en = 0;
     decode_en = 0;
     exec_en = 0;
     wb_en = 0;
 end
 
 always @ (posedge clk) begin
-    if (fetch_state == `STATE_COMPLETE && decode_state == `STATE_IDLE) begin
-        decode_inst <= inst;
-        decode_en <= 1;
-        fetch_en <= 0;
-        pc <= pc + 1;
-    end
-    if (fetch_state == `STATE_IDLE && exec_state != `STATE_BUSY)
-        fetch_en <= 1;
-    if (fetch_state == `STATE_BUSY)
-        addr <= fetch_addr;
+    if (~rst) begin
+        if (fetch_state == `STATE_COMPLETE && decode_state == `STATE_IDLE) begin
+            decode_inst <= inst;
+            decode_en <= 1;
+            fetch_en <= 0;
+            pc <= pc + 1;
+        end
+        if (fetch_state == `STATE_IDLE && exec_state != `STATE_BUSY)
+            fetch_en <= 1;
+        if (fetch_state == `STATE_BUSY)
+            addr <= fetch_addr;
 
-    if (exec_state == `STATE_IDLE && decode_state == `STATE_COMPLETE && fetch_state != `STATE_BUSY) begin
-        exec_op <= decode_inst_type;
-        exec_addr_in <= decode_addr[4:0];
-        exec_srcdst <= decode_srcdst;
-        decode_en <= 0;
+        if (exec_state == `STATE_IDLE && decode_state == `STATE_COMPLETE && fetch_state != `STATE_BUSY) begin
+            exec_op <= decode_inst_type;
+            exec_addr_in <= decode_addr[4:0];
+            exec_srcdst <= decode_srcdst;
+            decode_en <= 0;
 
-        case (decode_inst_type)
-            2'b00: begin
-                pc <= {2'b00, decode_addr};
-                fetch_en <= 0;
-                decode_en <= 0;
-                exec_en <= 0;
-            end
-            2'b01: exec_en <= 1;
-            2'b10: begin
-                exec_val1_in <= (decode_srcdst) ? a : b;
-                exec_en <= 1;
-            end
-            2'b11: exec_en <= 1;
-        endcase
-    end
-    if (exec_state == `STATE_BUSY) begin
-        addr <= exec_addr;
-        we <= exec_we;
-        data_out <= exec_data_out;
-    end
+            case (decode_inst_type)
+                2'b00: begin
+                    pc <= {2'b00, decode_addr};
+                    fetch_en <= 0;
+                    decode_en <= 0;
+                    exec_en <= 0;
+                end
+                2'b01: exec_en <= 1;
+                2'b10: begin
+                    exec_val1_in <= (decode_srcdst) ? a : b;
+                    exec_en <= 1;
+                end
+                2'b11: exec_en <= 1;
+            endcase
+        end
+        if (exec_state == `STATE_BUSY) begin
+            addr <= exec_addr;
+            we <= exec_we;
+            data_out <= exec_data_out;
+        end
 
-    if (exec_state == `STATE_COMPLETE && wb_state == `STATE_IDLE) begin
-        wb_op <= exec_op;
-        wb_srcdst <= exec_srcdst;
-        wb_en <= 1;
-        exec_en <= 0;
+        if (exec_state == `STATE_COMPLETE && wb_state == `STATE_IDLE) begin
+            wb_op <= exec_op;
+            wb_srcdst <= exec_srcdst;
+            wb_en <= 1;
+            exec_en <= 0;
+        end
+        if (wb_state == `STATE_COMPLETE)
+            wb_en <= 0;
     end
-    if (wb_state == `STATE_COMPLETE)
-        wb_en <= 0;
 end
 
 endmodule

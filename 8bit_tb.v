@@ -1,6 +1,7 @@
 module eightbit_tb();
 
 reg [7:0] mem [0:255];
+reg rst;
 reg clk;
 wire [7:0] addr;
 reg [7:0] mem_data_out;
@@ -8,6 +9,7 @@ wire [7:0] mem_data_in;
 wire we;
 
 eightbit eb(
+    .rst(rst),
     .clk(clk),
     .addr(addr),
     .data_in(mem_data_out),
@@ -40,6 +42,9 @@ initial begin
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
     $dumpvars(0, mem[8'hE0]);
+    rst = 1;
+    #1;
+    rst = 0;
     clk = 0;
 
     for (i = 0; i < 48; i = i + 1)
