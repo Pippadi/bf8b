@@ -30,6 +30,7 @@ always @ (posedge clk) begin
                 srcdst = inst[5];
             end
         endcase
+        $display("decode: %2x", inst);
         ready = 1;
     end
 end
