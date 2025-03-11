@@ -6,14 +6,17 @@ module eightbit(
     input rst,
     input clk,
     input [7:0] data_in,
+    input mem_ready,
     output reg [7:0] addr,
     output reg [7:0] data_out,
-    output reg we
+    output reg we,
+    output reg mem_req
 );
 
 reg [7:0] a, b, pc, inst;
 
 reg fetch_en, fetch_ready;
+reg fetch_mem_req, fetch_mem_ready;
 reg [7:0] fetch_addr;
 wire [1:0] fetch_state;
 
@@ -24,8 +27,10 @@ fetch Fetch (
     .clk(clk),
     .data_in(data_in),
     .pc(pc),
+    .mem_ready(fetch_mem_ready),
     .addr(fetch_addr),
     .inst_out(inst),
+    .mem_req(fetch_mem_req),
     .ready(fetch_ready)
 );
 
@@ -58,7 +63,7 @@ reg [7:0] exec_val_out;
 reg [7:0] exec_addr;
 reg [7:0] exec_data_out;
 reg exec_srcdst;
-reg exec_we;
+reg exec_we, exec_mem_req, exec_mem_ready;
 wire [1:0] exec_state;
 
 assign exec_state = {exec_en, exec_ready};
@@ -70,10 +75,12 @@ exec Execute (
     .val1(exec_val1_in),
     .val2(exec_val1_in),
     .addr_in(exec_addr_in),
+    .mem_ready(exec_mem_ready),
     .mem_data_in(data_in),
     .val_out(exec_val_out),
     .mem_addr(exec_addr),
     .mem_data_out(exec_data_out),
+    .mem_req(exec_mem_req),
     .we(exec_we),
     .ready(exec_ready)
 );
@@ -95,12 +102,15 @@ writeback Writeback(
     .ready(wb_ready)
 );
 
+reg mem_fetch_busy;
+
 always @ (posedge rst) begin
     pc = 8'h00;
     fetch_en = 0;
     decode_en = 0;
     exec_en = 0;
     wb_en = 0;
+    mem_fetch_busy = 0;
 end
 
 always @ (posedge clk) begin
@@ -113,10 +123,8 @@ always @ (posedge clk) begin
         end
         if (fetch_state == `STATE_IDLE && exec_state != `STATE_BUSY)
             fetch_en <= 1;
-        if (fetch_state == `STATE_BUSY)
-            addr <= fetch_addr;
 
-        if (exec_state == `STATE_IDLE && decode_state == `STATE_COMPLETE && fetch_state != `STATE_BUSY) begin
+        if (exec_state == `STATE_IDLE && decode_state == `STATE_COMPLETE) begin
             exec_op <= decode_inst_type;
             exec_addr_in <= decode_addr[4:0];
             exec_srcdst <= decode_srcdst;
@@ -137,11 +145,6 @@ always @ (posedge clk) begin
                 2'b11: exec_en <= 1;
             endcase
         end
-        if (exec_state == `STATE_BUSY) begin
-            addr <= exec_addr;
-            we <= exec_we;
-            data_out <= exec_data_out;
-        end
 
         if (exec_state == `STATE_COMPLETE && wb_state == `STATE_IDLE) begin
             wb_op <= exec_op;
@@ -151,6 +154,26 @@ always @ (posedge clk) begin
         end
         if (wb_state == `STATE_COMPLETE)
             wb_en <= 0;
+
+        if (exec_mem_req & ~mem_fetch_busy) begin
+            mem_req <= 1;
+            addr <= exec_addr;
+            data_out <= exec_data_out;
+            we <= exec_we;
+            exec_mem_ready <= mem_ready;
+        end else if (fetch_mem_req) begin
+            mem_req <= 1;
+            addr <= fetch_addr;
+            mem_fetch_busy <= 1;
+            we <= 0;
+            fetch_mem_ready <= mem_ready;
+        end else begin
+            mem_req <= 0;
+            mem_fetch_busy <= 0;
+            we <= 0;
+            fetch_mem_ready <= 0;
+            exec_mem_ready <= 0;
+        end
     end
 end
 
