@@ -39,7 +39,6 @@ always @ (posedge clk) begin
                 end
             end
             2'b10: begin
-                $display("fetch: %h", data_in);
                 ready <= 1;
             end
         endcase

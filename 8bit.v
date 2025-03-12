@@ -139,7 +139,7 @@ always @ (posedge clk) begin
                 end
                 2'b01: exec_en <= 1;
                 2'b10: begin
-                    exec_val1_in <= (decode_srcdst) ? a : b;
+                    exec_val1_in <= (decode_srcdst) ? b : a;
                     exec_en <= 1;
                 end
                 2'b11: begin

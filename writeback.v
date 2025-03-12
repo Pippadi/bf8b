@@ -27,6 +27,7 @@ always @ (posedge clk) begin
         else begin
             a <= a;
             b <= b;
+            ready <= 1;
         end
     end
 end
