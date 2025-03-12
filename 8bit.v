@@ -73,7 +73,7 @@ exec Execute (
     .clk(clk),
     .op(exec_op),
     .val1(exec_val1_in),
-    .val2(exec_val1_in),
+    .val2(exec_val2_in),
     .addr_in(exec_addr_in),
     .mem_ready(exec_mem_ready),
     .mem_data_in(data_in),
@@ -124,7 +124,7 @@ always @ (posedge clk) begin
         if (fetch_state == `STATE_IDLE && exec_state != `STATE_BUSY)
             fetch_en <= 1;
 
-        if (exec_state == `STATE_IDLE && decode_state == `STATE_COMPLETE) begin
+        if (exec_state == `STATE_IDLE && decode_state == `STATE_COMPLETE && wb_state == `STATE_IDLE) begin
             exec_op <= decode_inst_type;
             exec_addr_in <= decode_addr[4:0];
             exec_srcdst <= decode_srcdst;
@@ -142,7 +142,11 @@ always @ (posedge clk) begin
                     exec_val1_in <= (decode_srcdst) ? a : b;
                     exec_en <= 1;
                 end
-                2'b11: exec_en <= 1;
+                2'b11: begin
+                    exec_val1_in <= a;
+                    exec_val2_in <= b;
+                    exec_en <= 1;
+                end
             endcase
         end
 
