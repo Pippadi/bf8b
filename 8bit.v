@@ -170,11 +170,9 @@ always @ (posedge clk) begin
 
         if (stage_should_rst(exec_state, wb_state)) begin
             exec_en <= 0;
-            //if (exec_op == OP_LOD || exec_op == OP_ADD) begin
-            wb_op <= exec_op;
-            wb_srcdst <= exec_srcdst;
-            wb_en <= 1;
-            //end
+                wb_op <= exec_op;
+                wb_srcdst <= exec_srcdst;
+                wb_en <= 1;
         end
         if (wb_state == STATE_COMPLETE)
             wb_en <= 0;

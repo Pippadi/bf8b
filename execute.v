@@ -21,7 +21,7 @@ module exec
     output reg ready
 );
 
-reg [1:0] cycle;
+reg cycle;
 
 always @ (posedge en) begin
     ready <= 0;
@@ -35,7 +35,7 @@ always @ (posedge en) begin
     end
 
     mem_addr <= {3'b111, addr_in};
-    cycle = 2'b00;
+    cycle <= 0;
 end
 
 always @ (negedge en) begin
@@ -45,19 +45,15 @@ end
 always @ (posedge clk) begin
     if (en) begin
         if (op == OP_LOD || op == OP_STR) begin
-            case (cycle)
-                2'b00: begin
+                if (~cycle) begin
                     cycle <= 2'b01;
                     mem_req <= 1;
-                end
-                2'b01: if (mem_ready) begin
-                    cycle <= 2'b10;
+                    end else if (mem_ready) begin
                     mem_req <= 0;
+                    ready <= 1;
                     if (op == 2'b01)
                         val_out <= mem_data_in;
                 end
-                2'b10: ready <= 1;
-            endcase
         end
         else begin
             val_out <= val1 + val2;

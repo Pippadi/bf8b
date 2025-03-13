@@ -39,7 +39,7 @@ always @ (posedge clk) begin
                 end
             end
             2'b10: begin
-                ready <= 1;
+                    ready <= 1;
             end
         endcase
     end
