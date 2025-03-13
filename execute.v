@@ -1,4 +1,10 @@
-module exec(
+module exec
+#(
+    parameter OP_LOD = 2'b01,
+    parameter OP_STR = 2'b10,
+    parameter OP_ADD = 2'b11
+)
+(
     input en,
     input clk,
     input [1:0] op,
@@ -38,7 +44,7 @@ end
 
 always @ (posedge clk) begin
     if (en) begin
-        if (op == 2'b10 || op == 2'b01) begin
+        if (op == OP_LOD || op == OP_STR) begin
             case (cycle)
                 2'b00: begin
                     cycle <= 2'b01;

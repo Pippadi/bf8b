@@ -1,8 +1,12 @@
-`define STATE_IDLE 2'b00
-`define STATE_BUSY 2'b10
-`define STATE_COMPLETE 2'b11
 
-module eightbit(
+module eightbit
+#(
+    parameter OP_JMP = 2'b00,
+    parameter OP_LOD = 2'b01,
+    parameter OP_STR = 2'b10,
+    parameter OP_ADD = 2'b11
+)
+(
     input rst,
     input clk,
     input [7:0] data_in,
@@ -12,6 +16,10 @@ module eightbit(
     output reg we,
     output reg mem_req
 );
+
+localparam STATE_IDLE = 2'b00;
+localparam STATE_BUSY = 2'b10;
+localparam STATE_COMPLETE = 2'b11;
 
 reg [7:0] a, b, pc, inst;
 
@@ -37,7 +45,7 @@ fetch Fetch (
 reg decode_ready, decode_en;
 reg [7:0] decode_inst;
 reg [5:0] decode_addr;
-reg [1:0] decode_inst_type;
+reg [1:0] decode_op;
 reg decode_srcdst;
 wire [1:0] decode_state;
 
@@ -47,7 +55,7 @@ decode Decode (
     .en(decode_en),
     .clk(clk),
     .inst(decode_inst),
-    .inst_type(decode_inst_type),
+    .op(decode_op),
     .addr(decode_addr),
     .srcdst(decode_srcdst),
     .ready(decode_ready)
@@ -68,7 +76,11 @@ wire [1:0] exec_state;
 
 assign exec_state = {exec_en, exec_ready};
 
-exec Execute (
+exec #(
+    .OP_LOD(OP_LOD),
+    .OP_STR(OP_STR),
+    .OP_ADD(OP_ADD)
+) Execute (
     .en(exec_en),
     .clk(clk),
     .op(exec_op),
@@ -91,7 +103,10 @@ wire [1:0] wb_state;
 
 assign wb_state = {wb_en, wb_ready};
 
-writeback Writeback(
+writeback #(
+    .OP_LOD(OP_LOD),
+    .OP_ADD(OP_ADD)
+) Writeback (
     .en(wb_en),
     .clk(clk),
     .op(exec_op),
@@ -115,34 +130,34 @@ end
 
 always @ (posedge clk) begin
     if (~rst) begin
-        if (fetch_state == `STATE_COMPLETE && decode_state == `STATE_IDLE) begin
+        if (fetch_state == STATE_COMPLETE && decode_state == STATE_IDLE) begin
             decode_inst <= inst;
             decode_en <= 1;
             fetch_en <= 0;
             pc <= pc + 1;
         end
-        if (fetch_state == `STATE_IDLE && exec_state != `STATE_BUSY)
+        if (fetch_state == STATE_IDLE && exec_state != STATE_BUSY)
             fetch_en <= 1;
 
-        if (exec_state == `STATE_IDLE && decode_state == `STATE_COMPLETE && wb_state == `STATE_IDLE) begin
-            exec_op <= decode_inst_type;
+        if (exec_state == STATE_IDLE && decode_state == STATE_COMPLETE && wb_state == STATE_IDLE) begin
+            exec_op <= decode_op;
             exec_addr_in <= decode_addr[4:0];
             exec_srcdst <= decode_srcdst;
             decode_en <= 0;
 
-            case (decode_inst_type)
-                2'b00: begin
+            case (decode_op)
+                OP_JMP: begin
                     pc <= {2'b00, decode_addr};
                     fetch_en <= 0;
                     decode_en <= 0;
                     exec_en <= 0;
                 end
-                2'b01: exec_en <= 1;
-                2'b10: begin
+                OP_LOD: exec_en <= 1;
+                OP_STR: begin
                     exec_val1_in <= (decode_srcdst) ? b : a;
                     exec_en <= 1;
                 end
-                2'b11: begin
+                OP_ADD: begin
                     exec_val1_in <= a;
                     exec_val2_in <= b;
                     exec_en <= 1;
@@ -150,15 +165,16 @@ always @ (posedge clk) begin
             endcase
         end
 
-        if (exec_state == `STATE_COMPLETE && wb_state == `STATE_IDLE) begin
+        if (exec_state == STATE_COMPLETE && wb_state == STATE_IDLE) begin
             wb_op <= exec_op;
             wb_srcdst <= exec_srcdst;
             wb_en <= 1;
             exec_en <= 0;
         end
-        if (wb_state == `STATE_COMPLETE)
+        if (wb_state == STATE_COMPLETE)
             wb_en <= 0;
 
+        // Memory request muxing
         if (exec_mem_req & ~mem_fetch_busy) begin
             mem_req <= 1;
             addr <= exec_addr;

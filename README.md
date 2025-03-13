@@ -29,6 +29,7 @@ For `DST`/`SRC`:
 
 Edit [the testbench](/8bit_tb.v). That's right.
 
+Execution begins at address `0x00`.
 Jumps can only be performed in the first 64 bytes of memory, and only the last 32 bytes of memory are addressable with `LOD` and `STR`.
 Also ensure that you specify an adequate number of clock pulses in the simulation for your program.
 Dump bytes of `mem` relevant to you to the VCD file with `$dumpvars(0, mem[ADDR])`.
