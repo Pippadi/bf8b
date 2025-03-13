@@ -1,4 +1,3 @@
-
 module eightbit
 #(
     parameter OP_JMP = 2'b00,
@@ -119,6 +118,10 @@ writeback #(
 
 reg mem_fetch_busy;
 
+function automatic stage_should_rst(input[1:0] this_stage_state, next_stage_state);
+    stage_should_rst = this_stage_state == STATE_COMPLETE && next_stage_state == STATE_IDLE;
+endfunction
+
 always @ (posedge rst) begin
     pc = 8'h00;
     fetch_en = 0;
@@ -130,7 +133,7 @@ end
 
 always @ (posedge clk) begin
     if (~rst) begin
-        if (fetch_state == STATE_COMPLETE && decode_state == STATE_IDLE) begin
+        if (stage_should_rst(fetch_state, decode_state)) begin
             decode_inst <= inst;
             decode_en <= 1;
             fetch_en <= 0;
@@ -139,7 +142,7 @@ always @ (posedge clk) begin
         if (fetch_state == STATE_IDLE && exec_state != STATE_BUSY)
             fetch_en <= 1;
 
-        if (exec_state == STATE_IDLE && decode_state == STATE_COMPLETE && wb_state == STATE_IDLE) begin
+        if (stage_should_rst(decode_state, exec_state) && wb_state == STATE_IDLE) begin
             exec_op <= decode_op;
             exec_addr_in <= decode_addr[4:0];
             exec_srcdst <= decode_srcdst;
@@ -165,11 +168,13 @@ always @ (posedge clk) begin
             endcase
         end
 
-        if (exec_state == STATE_COMPLETE && wb_state == STATE_IDLE) begin
+        if (stage_should_rst(exec_state, wb_state)) begin
+            exec_en <= 0;
+            //if (exec_op == OP_LOD || exec_op == OP_ADD) begin
             wb_op <= exec_op;
             wb_srcdst <= exec_srcdst;
             wb_en <= 1;
-            exec_en <= 0;
+            //end
         end
         if (wb_state == STATE_COMPLETE)
             wb_en <= 0;
