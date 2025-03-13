@@ -139,7 +139,7 @@ always @ (posedge clk) begin
             fetch_en <= 0;
             pc <= pc + 1;
         end
-        if (fetch_state == STATE_IDLE && exec_state != STATE_BUSY)
+        if (fetch_state == STATE_IDLE)
             fetch_en <= 1;
 
         if (stage_should_rst(decode_state, exec_state) && wb_state == STATE_IDLE) begin
