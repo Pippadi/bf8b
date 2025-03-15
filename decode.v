@@ -8,12 +8,11 @@ module decode(
     output reg ready
 );
 
-always @ (posedge en or negedge en) begin
-    ready <= 0;
-end
+reg was_enabled;
 
 always @ (posedge clk) begin
-    if (en) begin
+    was_enabled <= en;
+    if (en & was_enabled) begin
         op <= inst[7:6];
         case (inst[7:6])
             2'b00: addr <= inst[5:0];
@@ -28,6 +27,8 @@ always @ (posedge clk) begin
         endcase
         ready <= 1;
     end
+    else
+        ready <= 0;
 end
 
 endmodule

@@ -16,12 +16,11 @@ module writeback
     output reg ready
 );
 
-always @ (posedge en or negedge en) begin
-    ready <= 0;
-end
+reg was_enabled;
 
 always @ (posedge clk) begin
-    if (en) begin
+    was_enabled <= en;
+    if (en & was_enabled) begin
         if (op == OP_LOD || op == OP_ADD) begin
             if (srcdst) begin
                 b_out <= val;
@@ -38,6 +37,8 @@ always @ (posedge clk) begin
         end
         ready <= 1;
     end
+    else
+        ready <= 0;
 end
 
 endmodule
