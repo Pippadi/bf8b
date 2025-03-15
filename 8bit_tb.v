@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module eightbit_tb();
 
 reg rst;
@@ -6,7 +8,7 @@ reg clk;
 reg [7:0] mem [0:255];
 wire [7:0] addr;
 reg mem_ready;
-reg mem_req;
+wire mem_req;
 reg [7:0] mem_data_out;
 wire [7:0] mem_data_in;
 wire we;

@@ -20,11 +20,14 @@ localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
 
-reg [7:0] a, b, pc, inst;
+reg [7:0] a, b, pc;
 
-reg fetch_en, fetch_ready;
-reg fetch_mem_req, fetch_mem_ready;
-reg [7:0] fetch_addr;
+reg fetch_en;
+reg fetch_mem_ready;
+wire fetch_mem_req;
+wire fetch_ready;
+wire [7:0] fetch_addr;
+wire [7:0] fetch_inst;
 wire [1:0] fetch_state;
 
 assign fetch_state = {fetch_en, fetch_ready};
@@ -36,16 +39,17 @@ fetch Fetch (
     .pc(pc),
     .mem_ready(fetch_mem_ready),
     .addr(fetch_addr),
-    .inst_out(inst),
+    .inst_out(fetch_inst),
     .mem_req(fetch_mem_req),
     .ready(fetch_ready)
 );
 
-reg decode_ready, decode_en;
+reg decode_en;
 reg [7:0] decode_inst;
-reg [5:0] decode_addr;
-reg [1:0] decode_op;
-reg decode_srcdst;
+wire decode_ready;
+wire [5:0] decode_addr;
+wire [1:0] decode_op;
+wire decode_srcdst;
 wire [1:0] decode_state;
 
 assign decode_state = {decode_en, decode_ready};
@@ -61,16 +65,18 @@ decode Decode (
 );
 
 reg exec_en;
-reg exec_ready;
 reg [1:0] exec_op;
+reg exec_srcdst;
 reg [4:0] exec_addr_in;
 reg [7:0] exec_val1_in;
 reg [7:0] exec_val2_in;
-reg [7:0] exec_val_out;
-reg [7:0] exec_addr;
-reg [7:0] exec_data_out;
-reg exec_srcdst;
-reg exec_we, exec_mem_req, exec_mem_ready;
+wire [7:0] exec_data_out;
+wire exec_ready;
+
+wire [7:0] exec_addr;
+wire exec_we, exec_mem_req;
+reg exec_mem_ready;
+wire [7:0] exec_val_out;
 wire [1:0] exec_state;
 
 assign exec_state = {exec_en, exec_ready};
@@ -96,9 +102,11 @@ exec #(
     .ready(exec_ready)
 );
 
-reg wb_srcdst, wb_ready, wb_en;
+reg wb_srcdst, wb_en;
 reg [1:0] wb_op;
+wire wb_ready;
 wire [1:0] wb_state;
+wire [7:0] wb_a, wb_b;
 
 assign wb_state = {wb_en, wb_ready};
 
@@ -110,12 +118,15 @@ writeback #(
     .clk(clk),
     .op(exec_op),
     .srcdst(wb_srcdst),
+    .a_in(a),
+    .b_in(b),
     .val(exec_val_out),
-    .a(a),
-    .b(b),
+    .a_out(wb_a),
+    .b_out(wb_b),
     .ready(wb_ready)
 );
 
+// For whether the fetch stage is holding the memory bus
 reg mem_fetch_busy;
 
 function automatic stage_should_rst(input[1:0] this_stage_state, next_stage_state);
@@ -134,7 +145,7 @@ end
 always @ (posedge clk) begin
     if (~rst) begin
         if (stage_should_rst(fetch_state, decode_state)) begin
-            decode_inst <= inst;
+            decode_inst <= fetch_inst;
             decode_en <= 1;
             fetch_en <= 0;
             pc <= pc + 1;
@@ -170,12 +181,15 @@ always @ (posedge clk) begin
 
         if (stage_should_rst(exec_state, wb_state)) begin
             exec_en <= 0;
-                wb_op <= exec_op;
-                wb_srcdst <= exec_srcdst;
-                wb_en <= 1;
+            wb_op <= exec_op;
+            wb_srcdst <= exec_srcdst;
+            wb_en <= 1;
         end
-        if (wb_state == STATE_COMPLETE)
+        if (wb_state == STATE_COMPLETE) begin
+            a <= wb_a;
+            b <= wb_b;
             wb_en <= 0;
+        end
 
         // Memory request muxing
         if (exec_mem_req & ~mem_fetch_busy) begin
