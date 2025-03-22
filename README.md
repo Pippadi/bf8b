@@ -42,3 +42,10 @@ make          # Compile with `iverilog`
 make 8bit.vcd # Make value change dump (simulation)
 make sim      # View waveforms in GTKWave
 ```
+
+## Roadmap
+
+For more instructions and more complete use of memory, at least 16-bit instructions are required.
+Fetching 16-bit instructions with an 8-bit data bus will be a huge bottleneck.
+An instruction cache is probably more fun than expanding the data bus, so that's next.
+Once conditional jumps are supported, basic branch prediction would be in order.
