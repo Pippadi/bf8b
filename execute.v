@@ -10,7 +10,7 @@ module exec
     input [1:0] op,
     input [7:0] val1,
     input [7:0] val2,
-    input [4:0] addr_in,
+    input [7:0] addr_in,
     input [7:0] mem_data_in,
     input mem_ready,
     output reg [7:0] val_out,
@@ -34,7 +34,7 @@ always @ (posedge en) begin
         we <= 0;
     end
 
-    mem_addr <= {3'b111, addr_in};
+    mem_addr <= addr_in;
     cycle <= 0;
 end
 
@@ -45,15 +45,15 @@ end
 always @ (posedge clk) begin
     if (en) begin
         if (op == OP_LOD || op == OP_STR) begin
-                if (~cycle) begin
-                    cycle <= 2'b01;
-                    mem_req <= 1;
-                    end else if (mem_ready) begin
-                    mem_req <= 0;
-                    ready <= 1;
-                    if (op == 2'b01)
-                        val_out <= mem_data_in;
-                end
+            if (~cycle) begin
+                cycle <= 2'b01;
+                mem_req <= 1;
+            end else if (mem_ready) begin
+                mem_req <= 0;
+                ready <= 1;
+                if (op == 2'b01)
+                    val_out <= mem_data_in;
+            end
         end
         else begin
             val_out <= val1 + val2;

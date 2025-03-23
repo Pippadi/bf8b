@@ -4,7 +4,7 @@ module decode(
     input [15:0] inst,
     output reg [1:0] op,
     output reg srcdst,
-    output reg [5:0] addr,
+    output reg [7:0] addr,
     output reg ready
 );
 
@@ -21,7 +21,7 @@ always @ (posedge clk) begin
                 srcdst <= inst[13];
             end
             default: begin
-                addr <= {1'b0, inst[12:8]};
+                addr <= inst[7:0];
                 srcdst <= inst[13];
             end
         endcase

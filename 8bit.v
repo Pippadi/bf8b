@@ -49,7 +49,7 @@ fetch Fetch (
 reg decode_en;
 reg [15:0] decode_inst;
 wire decode_ready;
-wire [5:0] decode_addr;
+wire [7:0] decode_addr;
 wire [1:0] decode_op;
 wire decode_srcdst;
 wire [1:0] decode_state;
@@ -69,7 +69,7 @@ decode Decode (
 reg exec_en;
 reg [1:0] exec_op;
 reg exec_srcdst;
-reg [4:0] exec_addr_in;
+reg [7:0] exec_addr_in;
 reg [7:0] exec_val1_in;
 reg [7:0] exec_val2_in;
 wire [7:0] exec_data_out;
@@ -150,20 +150,20 @@ always @ (posedge clk) begin
             decode_inst <= fetch_inst;
             decode_en <= 1;
             fetch_en <= 0;
-            pc <= pc + 1;
+            pc <= pc + 2;
         end
         if (fetch_state == STATE_IDLE)
             fetch_en <= 1;
 
         if (stage_should_rst(decode_state, exec_state) && wb_state == STATE_IDLE) begin
             exec_op <= decode_op;
-            exec_addr_in <= decode_addr[4:0];
+            exec_addr_in <= decode_addr;
             exec_srcdst <= decode_srcdst;
             decode_en <= 0;
 
             case (decode_op)
                 OP_JMP: begin
-                    pc <= {2'b00, decode_addr};
+                    pc <= decode_addr;
                     fetch_en <= 0;
                     decode_en <= 0;
                     exec_en <= 0;
