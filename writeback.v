@@ -9,7 +9,7 @@ module writeback
 (
     input en,
     input clk,
-    input [1:0] op,
+    input [3:0] op,
     input [3:0] reg_addr,
     input [7:0] val,
     output reg [7:0] regs [0:15],

@@ -64,7 +64,7 @@ wire [1:0] decode_state;
 
 assign decode_state = {decode_en, decode_ready};
 
-decode Decode (
+decode #(.OP_LODI(OP_LODI)) Decode (
     .en(decode_en),
     .clk(clk),
     .inst(decode_inst),
@@ -78,7 +78,7 @@ decode Decode (
 );
 
 reg exec_en;
-reg [1:0] exec_op;
+reg [3:0] exec_op;
 reg [3:0] exec_reg_addr;
 reg [7:0] exec_addr_in;
 reg [7:0] exec_val1_in;
@@ -194,7 +194,7 @@ always @ (posedge clk) begin
                     exec_en <= 1;
                 end
                 OP_ADDI: begin
-                    exec_val1_in <= reg_file[decode_reg0];
+                    exec_val1_in <= reg_file[decode_reg1];
                     exec_val2_in <= decode_imm;
                     exec_en <= 1;
                 end
@@ -212,9 +212,9 @@ always @ (posedge clk) begin
 
         if (stage_should_rst(exec_state, wb_state)) begin
             exec_en <= 0;
-                wb_op <= exec_op;
-                wb_reg_addr <= exec_reg_addr;
-                wb_en <= 1;
+            wb_op <= exec_op;
+            wb_reg_addr <= exec_reg_addr;
+            wb_en <= 1;
         end
         if (wb_state == STATE_COMPLETE) begin
             wb_en <= 0;

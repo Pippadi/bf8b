@@ -30,26 +30,24 @@ endtask
 
 integer i;
 initial begin
-    // Load a with 0x01
-    mem[8'h00] = 8'b00010000;
-    mem[8'h01] = 8'hE0;
-    mem[8'hE0] = 8'h01;
+    // Load r0 with 0x01
+    mem[8'h00] = 8'b01010000;
+    mem[8'h01] = 8'h01;
 
-    // Load b with 0x00
-    mem[8'h02] = 8'b00010001;
-    mem[8'h03] = 8'hE2;
-    mem[8'hE2] = 8'h00;
+    // Load r1 with 0x00
+    mem[8'h02] = 8'b01010001;
+    mem[8'h03] = 8'h00;
 
     // Loop top
-    // Store a at 0xE0
+    // Store r0 at 0xE0
     mem[8'h04] = 8'b00100000;
     mem[8'h05] = 8'hE0;
 
-    // Add a and b, and store sum in a
+    // Add r0 and r1, and store sum in r0
     mem[8'h06] = 8'b00110000;
     mem[8'h07] = 8'b00010000;
 
-    // Load b with a's previous value at 0xE0
+    // Load r1 with r0's previous value at 0xE0
     mem[8'h08] = 8'b00010001;
     mem[8'h09] = 8'hE0;
 
@@ -60,8 +58,8 @@ initial begin
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
     $dumpvars(0, mem[8'hE0]);
-    $dumpvars(0, eb.reg_file[0]);
-    $dumpvars(0, eb.reg_file[1]);
+    $dumpvars(0, eb.Writeback.reg_file[0]);
+    $dumpvars(0, eb.Writeback.reg_file[1]);
     rst = 1;
     #1;
     rst = 0;

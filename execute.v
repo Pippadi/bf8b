@@ -10,7 +10,7 @@ module exec
 (
     input en,
     input clk,
-    input [1:0] op,
+    input [3:0] op,
     input [7:0] val1,
     input [7:0] val2,
     input [7:0] addr_in,
@@ -29,7 +29,7 @@ reg cycle;
 always @ (posedge en) begin
     ready <= 0;
 
-    if (op == 2'b10) begin
+    if (op == OP_STR) begin
         we <= 1;
         mem_data_out <= val1;
     end else begin
@@ -54,7 +54,7 @@ always @ (posedge clk) begin
             end else if (mem_ready) begin
                 mem_req <= 0;
                 ready <= 1;
-                if (op == 2'b01)
+                if (op == OP_LOD)
                     val_out <= mem_data_in;
             end
         end
@@ -64,14 +64,14 @@ always @ (posedge clk) begin
                     val_out <= val1 + val2;
                 OP_ADDI:
                     val_out <= val1 + val2;
-                OP_NAND:
-                    val_out <= ~(val1 & val2);
                 OP_LODI:
                     val_out <= val1;
+                OP_NAND:
+                    val_out <= ~(val1 & val2);
             endcase
             ready <= 1;
         end
     end
 end
 
-    endmodule
+endmodule
