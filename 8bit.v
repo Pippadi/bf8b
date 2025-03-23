@@ -3,7 +3,11 @@ module eightbit
     parameter OP_JMP = 4'b0000,
     parameter OP_LOD = 4'b0001,
     parameter OP_STR = 4'b0010,
-    parameter OP_ADD = 4'b0011
+    parameter OP_ADD = 4'b0011,
+    parameter OP_ADDI = 4'b0100,
+    parameter OP_LODI = 4'b0101,
+    parameter OP_NAND = 4'b0110,
+    parameter OP_JEQZ = 4'b0111
 )
 (
     input rst,
@@ -53,6 +57,7 @@ reg decode_en;
 reg [15:0] decode_inst;
 wire decode_ready;
 wire [7:0] decode_addr;
+wire [7:0] decode_imm;
 wire [3:0] decode_op;
 wire [3:0] decode_reg0, decode_reg1, decode_reg2;
 wire [1:0] decode_state;
@@ -65,6 +70,7 @@ decode Decode (
     .inst(decode_inst),
     .op(decode_op),
     .addr(decode_addr),
+    .imm(decode_imm),
     .reg0(decode_reg0),
     .reg1(decode_reg1),
     .reg2(decode_reg2),
@@ -170,6 +176,13 @@ always @ (posedge clk) begin
                     decode_en <= 0;
                     exec_en <= 0;
                 end
+                OP_JEQZ: begin
+                    if (reg_file[decode_reg0] == 0)
+                        pc <= decode_addr;
+                    fetch_en <= 0;
+                    decode_en <= 0;
+                    exec_en <= 0;
+                end
                 OP_LOD: exec_en <= 1;
                 OP_STR: begin
                     exec_val1_in <= reg_file[decode_reg0];
@@ -180,16 +193,28 @@ always @ (posedge clk) begin
                     exec_val2_in <= reg_file[decode_reg2];
                     exec_en <= 1;
                 end
+                OP_ADDI: begin
+                    exec_val1_in <= reg_file[decode_reg0];
+                    exec_val2_in <= decode_imm;
+                    exec_en <= 1;
+                end
+                OP_LODI: begin
+                    exec_val1_in <= decode_imm;
+                    exec_en <= 1;
+                end
+                OP_NAND: begin
+                    exec_val1_in <= reg_file[decode_reg1];
+                    exec_val2_in <= reg_file[decode_reg2];
+                    exec_en <= 1;
+                end
             endcase
         end
 
         if (stage_should_rst(exec_state, wb_state)) begin
             exec_en <= 0;
-            if (exec_op == OP_LOD || exec_op == OP_ADD) begin
                 wb_op <= exec_op;
                 wb_reg_addr <= exec_reg_addr;
                 wb_en <= 1;
-            end
         end
         if (wb_state == STATE_COMPLETE) begin
             wb_en <= 0;

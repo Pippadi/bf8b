@@ -2,7 +2,10 @@ module exec
 #(
     parameter OP_LOD = 4'b0001,
     parameter OP_STR = 4'b0010,
-    parameter OP_ADD = 4'b0011
+    parameter OP_ADD = 4'b0011,
+    parameter OP_ADDI = 4'b0100,
+    parameter OP_LODI = 4'b0101,
+    parameter OP_NAND = 4'b0110
 )
 (
     input en,
@@ -56,10 +59,19 @@ always @ (posedge clk) begin
             end
         end
         else begin
-            val_out <= val1 + val2;
+            case(op)
+                OP_ADD:
+                    val_out <= val1 + val2;
+                OP_ADDI:
+                    val_out <= val1 + val2;
+                OP_NAND:
+                    val_out <= ~(val1 & val2);
+                OP_LODI:
+                    val_out <= val1;
+            endcase
             ready <= 1;
         end
     end
 end
 
-endmodule
+    endmodule
