@@ -1,4 +1,8 @@
-module decode(
+module decode
+#(
+    parameter OP_LODI = 4'b0001
+)
+(
     input en,
     input clk,
     input [15:0] inst,
@@ -21,7 +25,10 @@ always @ (posedge clk) begin
         reg1 <= inst[7:4];
         reg2 <= inst[3:0];
         addr <= inst[7:0];
-        imm <= inst[7:0];
+        if (op == OP_LODI)
+            imm <= inst[7:0];
+        else
+            imm <= { {5{ inst[3] }},  inst[2:0] };
         ready <= 1;
     end
     else
