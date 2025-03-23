@@ -21,7 +21,7 @@ reg [7:0] reg_file [0:15];
 
 assign regs = reg_file;
 
-function automatic needs_writeback (input [1:0] op);
+function automatic needs_writeback (input [3:0] op);
     needs_writeback =
         (op == OP_LOD) ||
         (op == OP_ADD) ||

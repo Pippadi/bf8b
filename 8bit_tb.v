@@ -40,26 +40,31 @@ initial begin
 
     // Loop top
     // Store r0 at 0xE0
-    mem[8'h04] = 8'b00100000;
+    mem[8'h04] = 8'h20;
     mem[8'h05] = 8'hE0;
 
-    // Add r0 and r1, and store sum in r0
-    mem[8'h06] = 8'b00110000;
-    mem[8'h07] = 8'b00010000;
+    // Back up r0 to r2
+    mem[8'h06] = 8'h42;
+    mem[8'h07] = 8'h00;
 
-    // Load r1 with r0's previous value at 0xE0
-    mem[8'h08] = 8'b00010001;
-    mem[8'h09] = 8'hE0;
+    // Add r0 and r1, and store sum in r0
+    mem[8'h08] = 8'h30;
+    mem[8'h09] = 8'h10;
+
+    // Load r1 with r0's previous value from r2
+    mem[8'h0A] = 8'h41;
+    mem[8'h0B] = 8'h20;
 
     // Jump to top of loop
-    mem[8'h0A] = 8'h00;
-    mem[8'h0B] = 8'h04;
+    mem[8'h0C] = 8'h00;
+    mem[8'h0D] = 8'h04;
 
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
     $dumpvars(0, mem[8'hE0]);
     $dumpvars(0, eb.Writeback.reg_file[0]);
     $dumpvars(0, eb.Writeback.reg_file[1]);
+    $dumpvars(0, eb.Writeback.reg_file[2]);
     rst = 1;
     #1;
     rst = 0;
