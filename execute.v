@@ -1,8 +1,8 @@
 module exec
 #(
-    parameter OP_LOD = 2'b01,
-    parameter OP_STR = 2'b10,
-    parameter OP_ADD = 2'b11
+    parameter OP_LOD = 4'b0001,
+    parameter OP_STR = 4'b0010,
+    parameter OP_ADD = 4'b0011
 )
 (
     input en,

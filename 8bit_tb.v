@@ -31,33 +31,37 @@ endtask
 integer i;
 initial begin
     // Load a with 0x01
-    mem[8'h00] = 8'b01000000;
+    mem[8'h00] = 8'b00010000;
     mem[8'h01] = 8'hE0;
     mem[8'hE0] = 8'h01;
 
     // Load b with 0x00
-    mem[8'h02] = 8'b01100010;
+    mem[8'h02] = 8'b00010001;
     mem[8'h03] = 8'hE2;
     mem[8'hE2] = 8'h00;
 
     // Loop top
     // Store a at 0xE0
-    mem[8'h04] = 8'b10000000;
+    mem[8'h04] = 8'b00100000;
     mem[8'h05] = 8'hE0;
 
     // Add a and b, and store sum in a
-    mem[8'h06] = 8'b11000000;
+    mem[8'h06] = 8'b00110000;
+    mem[8'h07] = 8'b00010000;
 
     // Load b with a's previous value at 0xE0
-    mem[8'h08] = 8'b01100000;
+    mem[8'h08] = 8'b00010001;
     mem[8'h09] = 8'hE0;
 
     // Jump to top of loop
-    mem[8'h0A] = 8'h04;
+    mem[8'h0A] = 8'h00;
+    mem[8'h0B] = 8'h04;
 
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
     $dumpvars(0, mem[8'hE0]);
+    $dumpvars(0, eb.reg_file[0]);
+    $dumpvars(0, eb.reg_file[1]);
     rst = 1;
     #1;
     rst = 0;

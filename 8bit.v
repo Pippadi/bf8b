@@ -1,9 +1,9 @@
 module eightbit
 #(
-    parameter OP_JMP = 2'b00,
-    parameter OP_LOD = 2'b01,
-    parameter OP_STR = 2'b10,
-    parameter OP_ADD = 2'b11
+    parameter OP_JMP = 4'b0000,
+    parameter OP_LOD = 4'b0001,
+    parameter OP_STR = 4'b0010,
+    parameter OP_ADD = 4'b0011
 )
 (
     input rst,
@@ -19,7 +19,10 @@ localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
 
-reg [7:0] a, b, pc;
+wire [7:0] reg_file [15:0];
+
+reg [7:0] a, b;
+reg [7:0] pc;
 reg [7:0] mem_data_out;
 
 assign data = (we) ? mem_data_out : 8'hzz;
@@ -50,8 +53,8 @@ reg decode_en;
 reg [15:0] decode_inst;
 wire decode_ready;
 wire [7:0] decode_addr;
-wire [1:0] decode_op;
-wire decode_srcdst;
+wire [3:0] decode_op;
+wire [3:0] decode_reg0, decode_reg1, decode_reg2;
 wire [1:0] decode_state;
 
 assign decode_state = {decode_en, decode_ready};
@@ -62,13 +65,15 @@ decode Decode (
     .inst(decode_inst),
     .op(decode_op),
     .addr(decode_addr),
-    .srcdst(decode_srcdst),
+    .reg0(decode_reg0),
+    .reg1(decode_reg1),
+    .reg2(decode_reg2),
     .ready(decode_ready)
 );
 
 reg exec_en;
 reg [1:0] exec_op;
-reg exec_srcdst;
+reg [3:0] exec_reg_addr;
 reg [7:0] exec_addr_in;
 reg [7:0] exec_val1_in;
 reg [7:0] exec_val2_in;
@@ -104,11 +109,11 @@ exec #(
     .ready(exec_ready)
 );
 
-reg wb_srcdst, wb_en;
-reg [1:0] wb_op;
+reg wb_en;
+reg [3:0] wb_op;
+reg [3:0] wb_reg_addr;
 wire wb_ready;
 wire [1:0] wb_state;
-wire [7:0] wb_a, wb_b;
 
 assign wb_state = {wb_en, wb_ready};
 
@@ -119,12 +124,9 @@ writeback #(
     .en(wb_en),
     .clk(clk),
     .op(exec_op),
-    .srcdst(wb_srcdst),
-    .a_in(a),
-    .b_in(b),
+    .reg_addr(wb_reg_addr),
     .val(exec_val_out),
-    .a_out(wb_a),
-    .b_out(wb_b),
+    .regs(reg_file),
     .ready(wb_ready)
 );
 
@@ -158,7 +160,7 @@ always @ (posedge clk) begin
         if (stage_should_rst(decode_state, exec_state) && wb_state == STATE_IDLE) begin
             exec_op <= decode_op;
             exec_addr_in <= decode_addr;
-            exec_srcdst <= decode_srcdst;
+            exec_reg_addr <= decode_reg0;
             decode_en <= 0;
 
             case (decode_op)
@@ -170,12 +172,12 @@ always @ (posedge clk) begin
                 end
                 OP_LOD: exec_en <= 1;
                 OP_STR: begin
-                    exec_val1_in <= (decode_srcdst) ? b : a;
+                    exec_val1_in <= reg_file[decode_reg0];
                     exec_en <= 1;
                 end
                 OP_ADD: begin
-                    exec_val1_in <= a;
-                    exec_val2_in <= b;
+                    exec_val1_in <= reg_file[decode_reg1];
+                    exec_val2_in <= reg_file[decode_reg2];
                     exec_en <= 1;
                 end
             endcase
@@ -183,13 +185,13 @@ always @ (posedge clk) begin
 
         if (stage_should_rst(exec_state, wb_state)) begin
             exec_en <= 0;
-            wb_op <= exec_op;
-            wb_srcdst <= exec_srcdst;
-            wb_en <= 1;
+            if (exec_op == OP_LOD || exec_op == OP_ADD) begin
+                wb_op <= exec_op;
+                wb_reg_addr <= exec_reg_addr;
+                wb_en <= 1;
+            end
         end
         if (wb_state == STATE_COMPLETE) begin
-            a <= wb_a;
-            b <= wb_b;
             wb_en <= 0;
         end
 
