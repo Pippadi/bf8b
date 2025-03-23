@@ -35,21 +35,21 @@ initial begin
     mem[8'hE0] = 8'h01;
 
     // Load b with 0x01
-    mem[8'h01] = 8'b01100010;
+    mem[8'h02] = 8'b01100010;
     mem[8'hE2] = 8'h00;
 
     // Loop top
     // Store a at 0xE0
-    mem[8'h02] = 8'b10000000;
+    mem[8'h04] = 8'b10000000;
 
     // Add a and b, and store sum in a
-    mem[8'h03] = 8'b11000000;
+    mem[8'h06] = 8'b11000000;
 
     // Load b with a's previous value at 0xE0
-    mem[8'h04] = 8'b01100000;
+    mem[8'h08] = 8'b01100000;
 
     // Jump to top of loop
-    mem[8'h05] = 8'b00000010;
+    mem[8'h0a] = 8'b00000100;
 
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);

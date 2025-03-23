@@ -29,7 +29,7 @@ reg fetch_mem_ready;
 wire fetch_mem_req;
 wire fetch_ready;
 wire [7:0] fetch_addr;
-wire [7:0] fetch_inst;
+wire [15:0] fetch_inst;
 wire [1:0] fetch_state;
 
 assign fetch_state = {fetch_en, fetch_ready};
@@ -47,7 +47,7 @@ fetch Fetch (
 );
 
 reg decode_en;
-reg [7:0] decode_inst;
+reg [15:0] decode_inst;
 wire decode_ready;
 wire [5:0] decode_addr;
 wire [1:0] decode_op;
