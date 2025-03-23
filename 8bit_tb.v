@@ -9,8 +9,7 @@ reg [7:0] mem [0:255];
 wire [7:0] addr;
 reg mem_ready;
 wire mem_req;
-reg [7:0] mem_data_out;
-wire [7:0] mem_data_in;
+wire [7:0] mem_data;
 wire we;
 
 eightbit eb(
@@ -18,8 +17,7 @@ eightbit eb(
     .clk(clk),
     .addr(addr),
     .mem_ready(mem_ready),
-    .data_in(mem_data_out),
-    .data_out(mem_data_in),
+    .data(mem_data),
     .mem_req(mem_req),
     .we(we)
 );
@@ -65,14 +63,12 @@ initial begin
         pulseClk();
 end
 
+assign mem_data = (we) ? 8'hzz : mem[addr];
+
 always @(posedge clk) begin
-    mem_ready = 0;
-    if (mem_req) begin
-        if (we)
-            mem[addr] = mem_data_in;
-        mem_data_out = mem[addr];
-        mem_ready = 1;
-    end
+    mem_ready = mem_req;
+    if (we)
+        mem[addr] = mem_data;
 end
 
 endmodule;

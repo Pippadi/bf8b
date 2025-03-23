@@ -8,10 +8,9 @@ module eightbit
 (
     input rst,
     input clk,
-    input [7:0] data_in,
     input mem_ready,
+    inout [7:0] data,
     output reg [7:0] addr,
-    output reg [7:0] data_out,
     output reg we,
     output reg mem_req
 );
@@ -21,6 +20,9 @@ localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
 
 reg [7:0] a, b, pc;
+reg [7:0] mem_data_out;
+
+assign data = (we) ? mem_data_out : 8'hzz;
 
 reg fetch_en;
 reg fetch_mem_ready;
@@ -35,7 +37,7 @@ assign fetch_state = {fetch_en, fetch_ready};
 fetch Fetch (
     .en(fetch_en),
     .clk(clk),
-    .data_in(data_in),
+    .data_in(data),
     .pc(pc),
     .mem_ready(fetch_mem_ready),
     .addr(fetch_addr),
@@ -93,7 +95,7 @@ exec #(
     .val2(exec_val2_in),
     .addr_in(exec_addr_in),
     .mem_ready(exec_mem_ready),
-    .mem_data_in(data_in),
+    .mem_data_in(data),
     .val_out(exec_val_out),
     .mem_addr(exec_addr),
     .mem_data_out(exec_data_out),
@@ -195,7 +197,7 @@ always @ (posedge clk) begin
         if (exec_mem_req & ~mem_fetch_busy) begin
             mem_req <= 1;
             addr <= exec_addr;
-            data_out <= exec_data_out;
+            mem_data_out <= exec_data_out;
             we <= exec_we;
             exec_mem_ready <= mem_ready;
         end else if (fetch_mem_req) begin
