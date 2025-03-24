@@ -42,6 +42,7 @@ wire [1:0] fetch_state;
 assign fetch_state = {fetch_en, fetch_ready};
 
 fetch Fetch (
+    .rst(rst),
     .en(fetch_en),
     .clk(clk),
     .data_in(data),

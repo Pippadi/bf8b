@@ -65,6 +65,15 @@ initial begin
     $dumpvars(0, eb.Writeback.reg_file[0]);
     $dumpvars(0, eb.Writeback.reg_file[1]);
     $dumpvars(0, eb.Writeback.reg_file[2]);
+
+    /*
+    for (i = 0; i < 6; i = i + 1) begin
+        $dumpvars(0, eb.Fetch.ICache.ages[i]);
+        $dumpvars(0, eb.Fetch.ICache.addrs[i]);
+        $dumpvars(0, eb.Fetch.ICache.datas[i]);
+    end
+    */
+
     rst = 1;
     #1;
     rst = 0;

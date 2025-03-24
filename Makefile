@@ -1,7 +1,15 @@
 .PHONY += clean sim
 
+SRCS += 8bit.v
+SRCS += 8bit_tb.v
+SRCS += fetch.v
+SRCS += decode.v
+SRCS += execute.v
+SRCS += writeback.v
+SRCS += cache.v
+
 eightbit:
-	iverilog -g2012 8bit.v 8bit_tb.v fetch.v decode.v execute.v writeback.v -o eightbit
+	iverilog -g2012 ${SRCS} -o eightbit
 
 8bit.vcd:
 	vvp eightbit
