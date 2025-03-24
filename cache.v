@@ -31,49 +31,47 @@ always @ (posedge clk) begin
             eldest = 0;
             for (j = 0; j < CELL_CNT; j = j + 1) begin
                 if (initialized != {CELL_CNT{1'b1}}) begin
-                    if (!initialized[j]) begin
+                    if (!initialized[j])
                         eldest = j;
-                    end
                 end
                 else begin
-                    if (ages[j] > ages[eldest]) begin
+                    if (ages[j] > ages[eldest])
                         eldest = j;
-                    end
                 end
+            end
+
+            addrs[eldest] = addr;
+            datas[eldest] = data;
+            ages[eldest] = 0;
+            initialized[eldest] = 1;
+
+            for (j = 0; j < CELL_CNT; j = j + 1) begin
+                if (j != eldest && initialized[j])
+                    ages[j] = ages[j] + 1;
+            end
         end
 
-        addrs[eldest] = addr;
-        datas[eldest] = data;
-        ages[eldest] = 0;
-        initialized[eldest] = 1;
-
-        for (j = 0; j < CELL_CNT; j = j + 1) begin
-            if (j != eldest && initialized[j])
-                ages[j] = ages[j] + 1;
-        end
-    end
-
-    else begin
-        hit = 0;
-        for (j = 0; j < CELL_CNT; j = j + 1) begin
-            if (addrs[j] == addr && initialized[j]) begin
-                data_reg = datas[j];
-                hit = 1;
+        else begin
+            hit = 0;
+            for (j = 0; j < CELL_CNT; j = j + 1) begin
+                if (addrs[j] == addr && initialized[j]) begin
+                    data_reg = datas[j];
+                    hit = 1;
+                end
             end
         end
     end
 end
-    end
 
-    always @ (posedge rst) begin
-        hit = 0;
-        for (j = 0; j < CELL_CNT; j = j + 1) begin
-            initialized = 0;
-            addrs[j] = 0;
-            datas[j] = 0;
-            ages[j] = 0;
-            data_reg = 0;
-        end
+always @ (posedge rst) begin
+    hit = 0;
+    for (j = 0; j < CELL_CNT; j = j + 1) begin
+        initialized = 0;
+        addrs[j] = 0;
+        datas[j] = 0;
+        ages[j] = 0;
+        data_reg = 0;
     end
+end
 
-    endmodule
+endmodule

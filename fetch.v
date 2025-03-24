@@ -38,12 +38,12 @@ always @ (posedge en) begin
     ready <= 0;
     mem_req <= 0;
     cache_we <= 0;
+    hibyte <= 1;
 end
 
 always @ (negedge en) begin
     ready <= 0;
     mem_req <= 0;
-    hibyte <= 1;
 end
 
 always @ (posedge clk) begin
@@ -58,6 +58,7 @@ always @ (posedge clk) begin
                 if (cache_hit) begin
                     inst_out <= cache_inst;
                     cycle <= 2'b11;
+                    mem_req <= 0;
                 end
                 if (mem_ready) begin
                     mem_req <= 0;
@@ -73,8 +74,8 @@ always @ (posedge clk) begin
                 end
             end
             2'b10: begin
-                cache_we <= 1;
                 cycle <= cycle + 1;
+                cache_we <= 1;
             end
             2'b11: begin
                 ready <= 1;
