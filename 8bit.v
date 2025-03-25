@@ -23,7 +23,15 @@ localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
 
-wire [7:0] reg_file [15:0];
+reg [7:0] reg_file [15:0];
+wire [8*16-1:0] packed_reg_file;
+
+integer i;
+always @ (*) begin
+    for (i = 0; i < 16; i = i + 1) begin
+        reg_file[i] = packed_reg_file[8*i +: 8];
+    end
+end
 
 reg [7:0] a, b;
 reg [7:0] pc;
@@ -133,7 +141,7 @@ writeback #(
     .op(exec_op),
     .reg_addr(wb_reg_addr),
     .val(exec_val_out),
-    .regs(reg_file),
+    .regs(packed_reg_file),
     .ready(wb_ready)
 );
 

@@ -12,14 +12,19 @@ module writeback
     input [3:0] op,
     input [3:0] reg_addr,
     input [7:0] val,
-    output reg [7:0] regs [0:15],
+    output reg [8*16-1:0] regs,
     output reg ready
 );
 
 reg was_enabled;
 reg [7:0] reg_file [0:15];
 
-assign regs = reg_file;
+integer i;
+always @ (*) begin
+    for (i = 0; i < 16; i = i + 1) begin
+        regs[8*i +: 8] = reg_file[i];
+    end
+end
 
 function automatic needs_writeback (input [3:0] op);
     needs_writeback =
