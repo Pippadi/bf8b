@@ -26,29 +26,13 @@ module exec
 
 reg cycle;
 
-always @ (posedge en) begin
-    ready <= 0;
-
-    if (op == OP_STR) begin
-        we <= 1;
-        mem_data_out <= val1;
-    end else begin
-        mem_data_out <= 8'hxx;
-        we <= 0;
-    end
-
-    mem_addr <= addr_in;
-    cycle <= 0;
-end
-
-always @ (negedge en) begin
-    ready <= 0;
-end
-
-always @ (posedge clk) begin
+always @ (posedge clk or posedge en) begin
     if (en) begin
         if (op == OP_LOD || op == OP_STR) begin
             if (~cycle) begin
+                mem_addr <= addr_in;
+                we <= op == OP_STR;
+                mem_data_out <= val1;
                 cycle <= 2'b01;
                 mem_req <= 1;
             end else if (mem_ready) begin
@@ -71,6 +55,12 @@ always @ (posedge clk) begin
             endcase
             ready <= 1;
         end
+    end
+
+    else begin
+        ready <= 0;
+        cycle <= 0;
+        we <= 0;
     end
 end
 

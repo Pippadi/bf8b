@@ -19,6 +19,7 @@ module writeback
 reg was_enabled;
 reg [7:0] reg_file [0:15];
 
+// Unpack the packed register file
 integer i;
 always @ (*) begin
     for (i = 0; i < 16; i = i + 1) begin
