@@ -33,21 +33,8 @@ assign cache_inst = (cache_we) ? inst_out : 16'hzzzz;
 reg [1:0] cycle;
 reg hibyte;
 
-always @ (posedge en) begin
-    cycle <= 0;
-    ready <= 0;
-    mem_req <= 0;
-    cache_we <= 0;
-    hibyte <= 1;
-end
-
-always @ (negedge en) begin
-    ready <= 0;
-    mem_req <= 0;
-end
-
-always @ (posedge clk) begin
-    if (en) begin
+always @ (posedge clk or posedge en) begin
+    if (~rst & en) begin
         case (cycle)
             2'b00: begin
                 addr <= (hibyte) ? pc : pc + 1;
@@ -82,6 +69,14 @@ always @ (posedge clk) begin
                 cache_we <= 0;
             end
         endcase
+    end
+
+    else begin
+        ready <= 0;
+        mem_req <= 0;
+        cache_we <= 0;
+        cycle <= 0;
+        hibyte <= 1;
     end
 end
 
