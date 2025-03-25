@@ -15,11 +15,8 @@ module decode
     output reg ready
 );
 
-reg was_enabled;
-
 always @ (posedge clk) begin
-    was_enabled <= en;
-    if (en & was_enabled) begin
+    if (en) begin
         op <= inst[15:12];
         reg0 <= inst[11:8];
         reg1 <= inst[7:4];
