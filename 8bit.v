@@ -26,13 +26,6 @@ localparam STATE_COMPLETE = 2'b11;
 reg [7:0] reg_file [15:0];
 wire [8*16-1:0] packed_reg_file;
 
-integer i;
-always @ (*) begin
-    for (i = 0; i < 16; i = i + 1) begin
-        reg_file[i] = packed_reg_file[8*i +: 8];
-    end
-end
-
 reg [7:0] a, b;
 reg [7:0] pc;
 reg [7:0] mem_data_out;
@@ -152,17 +145,25 @@ function automatic stage_should_rst(input[1:0] this_stage_state, next_stage_stat
     stage_should_rst = this_stage_state == STATE_COMPLETE && next_stage_state == STATE_IDLE;
 endfunction
 
-always @ (posedge rst) begin
-    pc = 8'h00;
-    fetch_en = 0;
-    decode_en = 0;
-    exec_en = 0;
-    wb_en = 0;
-    mem_fetch_busy = 0;
+// Pack the register file to satisfy more strict Verilog rules
+integer i;
+always @ (*) begin
+    for (i = 0; i < 16; i = i + 1) begin
+        reg_file[i] = packed_reg_file[8*i +: 8];
+    end
 end
 
-always @ (posedge clk) begin
-    if (~rst) begin
+always @ (posedge clk or posedge rst) begin
+    if (rst) begin
+        pc = 8'h00;
+        fetch_en = 0;
+        decode_en = 0;
+        exec_en = 0;
+        wb_en = 0;
+        mem_fetch_busy = 0;
+    end
+
+    else begin
         if (stage_should_rst(fetch_state, decode_state)) begin
             decode_inst <= fetch_inst;
             decode_en <= 1;
