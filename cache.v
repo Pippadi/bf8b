@@ -25,8 +25,19 @@ assign data = (we) ? 'hz : data_reg;
 integer i;
 integer hitIdx;
 integer eldest;
-always @ (posedge clk) begin
-    if (~rst) begin
+
+always @ (posedge clk or posedge rst) begin
+    if (rst) begin
+        hit = 0;
+        initialized = 0;
+        data_reg = 0;
+        for (i = 0; i < CELL_CNT; i = i + 1) begin
+            addrs[i] = 0;
+            datas[i] = 0;
+            ages[i] = 0;
+        end
+    end
+    else begin
         hit = 0;
         for (i = 0; i < CELL_CNT; i = i + 1) begin
             if (addrs[i] == addr && initialized[i]) begin
@@ -42,40 +53,29 @@ always @ (posedge clk) begin
                 ages[hitIdx] = 0;
             end
             else begin
-            eldest = 0;
-            for (i = 0; i < CELL_CNT; i = i + 1) begin
-                if (initialized != {CELL_CNT{1'b1}}) begin
-                    if (!initialized[i])
-                        eldest = i;
+                eldest = 0;
+                for (i = 0; i < CELL_CNT; i = i + 1) begin
+                    if (initialized != {CELL_CNT{1'b1}}) begin
+                        if (!initialized[i])
+                            eldest = i;
+                    end
+                    else begin
+                        if (ages[i] > ages[eldest])
+                            eldest = i;
+                    end
                 end
-                else begin
-                    if (ages[i] > ages[eldest])
-                        eldest = i;
+
+                addrs[eldest] = addr;
+                datas[eldest] = data;
+                ages[eldest] = 0;
+                initialized[eldest] = 1;
+
+                for (i = 0; i < CELL_CNT; i = i + 1) begin
+                    if (i != eldest && initialized[i])
+                        ages[i] = ages[i] + 1;
                 end
             end
-
-            addrs[eldest] = addr;
-            datas[eldest] = data;
-            ages[eldest] = 0;
-            initialized[eldest] = 1;
-
-            for (i = 0; i < CELL_CNT; i = i + 1) begin
-                if (i != eldest && initialized[i])
-                    ages[i] = ages[i] + 1;
-            end
         end
-        end
-    end
-end
-
-always @ (posedge rst) begin
-    hit = 0;
-    for (i = 0; i < CELL_CNT; i = i + 1) begin
-        initialized = 0;
-        addrs[i] = 0;
-        datas[i] = 0;
-        ages[i] = 0;
-        data_reg = 0;
     end
 end
 
