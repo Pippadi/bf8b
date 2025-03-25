@@ -22,21 +22,35 @@ reg [CELL_CNT-1:0] initialized;
 
 assign data = (we) ? 'hz : data_reg;
 
-integer j;
+integer i;
+integer hitIdx;
 integer eldest;
 always @ (posedge clk) begin
     if (~rst) begin
+        hit = 0;
+        for (i = 0; i < CELL_CNT; i = i + 1) begin
+            if (addrs[i] == addr && initialized[i]) begin
+                data_reg = datas[i];
+                hit = 1;
+                hitIdx = i;
+            end
+        end
+
         if (we) begin
-            hit = 0;
+            if (hit) begin
+                datas[hitIdx] = data;
+                ages[hitIdx] = 0;
+            end
+            else begin
             eldest = 0;
-            for (j = 0; j < CELL_CNT; j = j + 1) begin
+            for (i = 0; i < CELL_CNT; i = i + 1) begin
                 if (initialized != {CELL_CNT{1'b1}}) begin
-                    if (!initialized[j])
-                        eldest = j;
+                    if (!initialized[i])
+                        eldest = i;
                 end
                 else begin
-                    if (ages[j] > ages[eldest])
-                        eldest = j;
+                    if (ages[i] > ages[eldest])
+                        eldest = i;
                 end
             end
 
@@ -45,31 +59,22 @@ always @ (posedge clk) begin
             ages[eldest] = 0;
             initialized[eldest] = 1;
 
-            for (j = 0; j < CELL_CNT; j = j + 1) begin
-                if (j != eldest && initialized[j])
-                    ages[j] = ages[j] + 1;
+            for (i = 0; i < CELL_CNT; i = i + 1) begin
+                if (i != eldest && initialized[i])
+                    ages[i] = ages[i] + 1;
             end
         end
-
-        else begin
-            hit = 0;
-            for (j = 0; j < CELL_CNT; j = j + 1) begin
-                if (addrs[j] == addr && initialized[j]) begin
-                    data_reg = datas[j];
-                    hit = 1;
-                end
-            end
         end
     end
 end
 
 always @ (posedge rst) begin
     hit = 0;
-    for (j = 0; j < CELL_CNT; j = j + 1) begin
+    for (i = 0; i < CELL_CNT; i = i + 1) begin
         initialized = 0;
-        addrs[j] = 0;
-        datas[j] = 0;
-        ages[j] = 0;
+        addrs[i] = 0;
+        datas[i] = 0;
+        ages[i] = 0;
         data_reg = 0;
     end
 end
