@@ -16,7 +16,6 @@ module writeback
     output reg ready
 );
 
-reg was_enabled;
 reg [7:0] reg_file [0:15];
 
 // Unpack the packed register file
@@ -37,8 +36,7 @@ function automatic needs_writeback (input [3:0] op);
 endfunction
 
 always @ (posedge clk) begin
-    was_enabled <= en;
-    if (en & was_enabled) begin
+    if (en) begin
         if (needs_writeback(op)) begin
             reg_file[reg_addr] = val;
         end
