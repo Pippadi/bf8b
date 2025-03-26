@@ -49,7 +49,6 @@ make sim      # View waveforms in GTKWave
 ```
 
 ## Notes
-
 An 8-bit data bus is a huge bottleneck when fetching 16-bit instructions.
 An LRU instruction cache has been implemented to compensate. Its default size is 8 instructions (each cell is 16-bits).
 On-the-fly modification of instructions is not supported, as the fetch stage does not check for consistency between cached instructions and memory.
