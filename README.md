@@ -9,29 +9,34 @@ My first Verilog project. I have no idea what I'm doing.
 - 4-stage pipeline with fetch, decode, execute, and writeback
 - 8-bit data bus
 - 8-bit address bus
-- Two general-purpose registers
-- Four single-byte instructions
+- 16 general-purpose registers
+- Up to 16 two-byte instructions (8 implemented so far; nothing set in stone)
 
 ## Instruction set
 
-| Mnemonic | Opcode | Description |
-|----------|--------|-------------|
-| JMP | `00 [5:0     ADDRESS]` | Jump to `0b00[ADDRESS]` |
-| LOD | `01 DST [4:0 ADDRESS]` | Load from memory address `0b111[ADDRESS]` into register `DST` |
-| STR | `10 SRC [4:0 ADDRESS]` | Store from register `SRC` to memory at `0b111[ADDRESS]` |
-| ADD | `11 DST x  x  x  x  x` | Add `a` and `b` and store in `DST` |
+| Mnemonic | Instruction Format | Description |
+|----------|--------------------|-------------|
+| JMP  | `0000  XXXX    [ADDRESS]`   | `PC` to `ADDRESS` |
+| LOD  | `0001 [REG0]   [ADDRESS]`   | Load value at `ADDRESS` into `REG0` |
+| STR  | `0010 [REG0]   [ADDRESS]`   | Store from `REG0` to `ADDRESS` |
+| ADD  | `0011 [REG0] [REG1] [REG2]` | `REG0` = `REG1` + `REG2` |
+| ADDI | `0100 [REG0] [REG1] [IMM4]` | `REG0` = `REG1` + `IMM` |
+| LODI | `0101 [REG0]     [IMM8]   ` | Load `IMM` into `REG0` |
+| NAND | `0110 [REG0] [REG1] [REG2]` | `REG0` = `~(REG1 & REG2)` |
+| JEQZ | `0111 [REG0]   [ADDRESS] `  | `PC` to `ADDRESS` if `REG0` = 0 |
 
-For `DST`/`SRC`:
-- `a` = 0
-- `b` = 1
+- `PC` is the program counter.
+- `ADDRESS` is an 8-bit memory address
+- `REGn` is the 4-bit address for one of registers `r0` to `r15`
+- `IMM4` is a 4-bit immediate sign-extended to 8 bits for the concerned operation
+- `IMM8` is an 8-bit immediate
 
 ## Programming
 
 Edit [the testbench](/8bit_tb.v). That's right.
 
 Execution begins at address `0x00`.
-Jumps can only be performed in the first 64 bytes of memory, and only the last 32 bytes of memory are addressable with `LOD` and `STR`.
-Also ensure that you specify an adequate number of clock pulses in the simulation for your program.
+Ensure that you specify an adequate number of clock pulses in the simulation for your program.
 Dump bytes of `mem` relevant to you to the VCD file with `$dumpvars(0, mem[ADDR])`.
 
 Build with the Makefile. This is written to use Icarus Verilog and GTKWave.
@@ -43,9 +48,11 @@ make 8bit.vcd # Make value change dump (simulation)
 make sim      # View waveforms in GTKWave
 ```
 
-## Roadmap
+## Notes
 
-For more instructions and more complete use of memory, at least 16-bit instructions are required.
-Fetching 16-bit instructions with an 8-bit data bus will be a huge bottleneck.
-An instruction cache is probably more fun than expanding the data bus, so that's next.
-Once conditional jumps are supported, basic branch prediction would be in order.
+An 8-bit data bus is a huge bottleneck when fetching 16-bit instructions.
+An LRU instruction cache has been implemented to compensate. Its default size is 8 instructions (each cell is 16-bits).
+On-the-fly modification of instructions is not supported, as the fetch stage does not check for consistency between cached instructions and memory.
+
+Basic branch prediction is a future goal.
+
