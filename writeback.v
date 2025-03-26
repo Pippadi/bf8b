@@ -38,7 +38,7 @@ endfunction
 always @ (posedge clk) begin
     if (en) begin
         if (needs_writeback(op)) begin
-            reg_file[reg_addr] = val;
+            reg_file[reg_addr] <= val;
         end
         ready <= 1;
     end

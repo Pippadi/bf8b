@@ -22,6 +22,7 @@ module eightbit
 localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
+localparam STATE_RESETTING = 2'b01;
 
 reg [7:0] reg_file [15:0];
 wire [8*16-1:0] packed_reg_file;
@@ -141,8 +142,32 @@ writeback #(
 // For whether the fetch stage is holding the memory bus
 reg mem_fetch_busy;
 
-function automatic stage_should_rst(input[1:0] this_stage_state, next_stage_state);
-    stage_should_rst = this_stage_state == STATE_COMPLETE && next_stage_state == STATE_IDLE;
+function automatic fetch_should_start();
+    fetch_should_start =
+        fetch_state == STATE_IDLE ||
+        fetch_state == STATE_RESETTING;
+endfunction
+
+function automatic decode_should_start();
+    decode_should_start =
+        fetch_state == STATE_COMPLETE &&
+        decode_state == STATE_IDLE;
+endfunction
+
+function automatic exec_should_start();
+    exec_should_start =
+        decode_state == STATE_COMPLETE &&
+        (exec_state == STATE_IDLE || exec_state == STATE_RESETTING);
+    // Right now, writeback only takes one cycle to execute. This means that
+    // even if writeback is busy, any dependency issue will have been resolved
+    // by the time execute actually starts (the cycle after the calling of
+    // this function).
+endfunction
+
+function automatic wb_should_start();
+    wb_should_start =
+        exec_state == STATE_COMPLETE &&
+        (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
 endfunction
 
 // Pack the register file to satisfy more strict Verilog rules
@@ -164,16 +189,17 @@ always @ (posedge clk or posedge rst) begin
     end
 
     else begin
-        if (stage_should_rst(fetch_state, decode_state)) begin
+        if (fetch_should_start())
+            fetch_en <= 1;
+
+        if (decode_should_start()) begin
             decode_inst <= fetch_inst;
             decode_en <= 1;
             fetch_en <= 0;
             pc <= pc + 2;
         end
-        if (fetch_state == STATE_IDLE)
-            fetch_en <= 1;
 
-        if (stage_should_rst(decode_state, exec_state) && wb_state == STATE_IDLE) begin
+        if (exec_should_start()) begin
             exec_op <= decode_op;
             exec_addr_in <= decode_addr;
             exec_reg_addr <= decode_reg0;
@@ -183,14 +209,12 @@ always @ (posedge clk or posedge rst) begin
                 OP_JMP: begin
                     pc <= decode_addr;
                     fetch_en <= 0;
-                    decode_en <= 0;
                     exec_en <= 0;
                 end
                 OP_JEQZ: begin
                     if (reg_file[decode_reg0] == 0)
                         pc <= decode_addr;
                     fetch_en <= 0;
-                    decode_en <= 0;
                     exec_en <= 0;
                 end
                 OP_LOD: exec_en <= 1;
@@ -220,7 +244,7 @@ always @ (posedge clk or posedge rst) begin
             endcase
         end
 
-        if (stage_should_rst(exec_state, wb_state)) begin
+        if (wb_should_start()) begin
             exec_en <= 0;
             wb_op <= exec_op;
             wb_reg_addr <= exec_reg_addr;
