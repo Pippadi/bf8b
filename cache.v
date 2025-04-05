@@ -1,3 +1,4 @@
+// A multi-bit-wide shift register with exposed enables for each word
 module shift_reg
 #(
     parameter LENGTH = 8,
@@ -16,10 +17,11 @@ reg [WIDTH-1:0] q [0:LENGTH-1];
 
 integer i;
 always @ (*) begin
-    for (i = 0; i < LENGTH; i = i + 1) begin
+    // Pack the register file to satisfy more strict Verilog rules
+    for (i = 0; i < LENGTH; i = i + 1)
         q_packed[WIDTH*i +: WIDTH] = q[i];
-    end
 
+    // Prepare the flip flops' D inputs
     ds[0] = d;
     for (i = 1; i < LENGTH; i = i + 1)
         ds[i] = q[i-1];
@@ -73,6 +75,9 @@ always @ (*) begin
     end
 end
 
+// Shift register to hold data
+// Address is in the upper bits, data is in the lower bits
+// Position in the shift register indicates age
 shift_reg #(
     .LENGTH(CELL_CNT),
     .WIDTH(ADDR_WIDTH+DATA_WIDTH)
@@ -85,42 +90,53 @@ shift_reg #(
 );
 
 integer j;
+
+// Temporary variables for combinational logic in order to do nonblocking
+// assigns to real registers
 reg [0:CELL_CNT-1] tempEnables;
 reg tempHit;
 reg [DATA_WIDTH-1:0] tempDataOut;
+
+// Give the shift register a cycle to shift in data
 reg shiftCycle;
+
 always @ (posedge clk) begin
     if (~shiftCycle) begin
-    tempEnables = {CELL_CNT{1'b1}};
-    tempHit = 0;
-    for (j = 0; j < CELL_CNT; j = j + 1) begin
-        if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
-            tempDataOut = reg_data[j][DATA_WIDTH-1:0];
-            tempHit = 1;
-            tempEnables = tempEnables << (CELL_CNT-j-1);
-            $display("j = %0d, addr = %h, data = %h", j, addr, reg_data[j][DATA_WIDTH-1:0]);
+        tempEnables = {CELL_CNT{1'b1}};
+        tempHit = 0;
+        for (j = 0; j < CELL_CNT; j = j + 1) begin
+            if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
+                tempDataOut = reg_data[j][DATA_WIDTH-1:0];
+                tempHit = 1;
+                // Age all the data above this one
+                tempEnables = tempEnables << (CELL_CNT-j-1);
+            end
         end
-    end
-    hit <= tempHit;
-    data_reg <= tempDataOut;
+        hit <= tempHit;
+        data_reg <= tempDataOut;
 
-    if (we) begin
-        d_shiftin <= {addr, data};
-        enables <= tempEnables;
-        shiftCycle <= 1;
+        // Shift in the requested data to make it the least aged
+        if (we) begin
+            d_shiftin <= {addr, data};
+            enables <= tempEnables;
+            shiftCycle <= 1;
+        end
+
+        // Shift in the requested data to make it the least aged, overwriting
+        // its old position in the cache
+        else if (tempHit) begin
+            d_shiftin <= {addr, tempDataOut};
+            enables <= tempEnables;
+            shiftCycle <= 1;
+        end
+
+        else
+            enables <= {CELL_CNT{1'b0}};
     end
-    else if (tempHit) begin
-        d_shiftin <= {addr, tempDataOut};
-        enables <= tempEnables;
-        shiftCycle <= 1;
-    end
-    else
+    else begin
         enables <= {CELL_CNT{1'b0}};
-end
-else begin
-    enables <= {CELL_CNT{1'b0}};
-    shiftCycle = 0;
-end
+        shiftCycle = 0;
+    end
 end
 
 endmodule
