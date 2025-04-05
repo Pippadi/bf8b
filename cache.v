@@ -22,7 +22,7 @@ always @ (*) begin
 
     ds[0] = d;
     for (i = 1; i < LENGTH; i = i + 1)
-        ds[i] = q[LENGTH - i];
+        ds[i] = q[i-1];
 end
 
 integer j;
