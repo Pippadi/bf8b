@@ -66,7 +66,7 @@ initial begin
     $dumpvars(0, eb.Writeback.reg_file[1]);
     $dumpvars(0, eb.Writeback.reg_file[2]);
 
-    for (i = 0; i < 6; i = i + 1) begin
+    for (i = 0; i < 8; i = i + 1) begin
         $dumpvars(0, eb.Fetch.ICache.ShiftReg.q[i]);
     end
 

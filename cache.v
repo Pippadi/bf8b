@@ -6,7 +6,7 @@ module shift_reg
 (
     input rst,
     input clk,
-    input [LENGTH-1:0] en,
+    input [0:LENGTH-1] en,
     input [WIDTH-1:0] d,
     output reg [LENGTH * WIDTH - 1:0] q_packed
 );
@@ -60,7 +60,7 @@ module cache
 reg [DATA_WIDTH-1:0] data_reg;
 assign data = (we) ? 'hz : data_reg;
 
-reg [CELL_CNT-1:0] enables;
+reg [0:CELL_CNT-1] enables;
 
 reg [ADDR_WIDTH+DATA_WIDTH-1:0] d_shiftin;
 wire [(ADDR_WIDTH+DATA_WIDTH)*CELL_CNT-1:0] reg_data_packed;
@@ -69,7 +69,7 @@ reg [ADDR_WIDTH+DATA_WIDTH-1:0] reg_data [0:CELL_CNT-1];
 integer i;
 always @ (*) begin
     for (i = 0; i < 16; i = i + 1) begin
-        reg_data[i] = reg_data_packed[8*i +: 8];
+        reg_data[i] = reg_data_packed[(ADDR_WIDTH+DATA_WIDTH)*i +: (ADDR_WIDTH+DATA_WIDTH)];
     end
 end
 
@@ -85,26 +85,42 @@ shift_reg #(
 );
 
 integer j;
-reg [CELL_CNT-1:0] tempEnables;
+reg [0:CELL_CNT-1] tempEnables;
 reg tempHit;
+reg [DATA_WIDTH-1:0] tempDataOut;
+reg shiftCycle;
 always @ (posedge clk) begin
+    if (~shiftCycle) begin
     tempEnables = {CELL_CNT{1'b1}};
     tempHit = 0;
     for (j = 0; j < CELL_CNT; j = j + 1) begin
-        if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH:DATA_WIDTH]) begin
-            data_reg <= reg_data[j][DATA_WIDTH-1:0];
+        if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
+            tempDataOut = reg_data[j][DATA_WIDTH-1:0];
             tempHit = 1;
-            tempEnables = tempEnables << j;
+            tempEnables = tempEnables << (CELL_CNT-j-1);
+            $display("j = %0d, addr = %h, data = %h", j, addr, reg_data[j][DATA_WIDTH-1:0]);
         end
     end
     hit <= tempHit;
+    data_reg <= tempDataOut;
 
     if (we) begin
         d_shiftin <= {addr, data};
         enables <= tempEnables;
+        shiftCycle <= 1;
+    end
+    else if (tempHit) begin
+        d_shiftin <= {addr, tempDataOut};
+        enables <= tempEnables;
+        shiftCycle <= 1;
     end
     else
         enables <= {CELL_CNT{1'b0}};
+end
+else begin
+    enables <= {CELL_CNT{1'b0}};
+    shiftCycle = 0;
+end
 end
 
 endmodule
