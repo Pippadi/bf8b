@@ -142,19 +142,19 @@ writeback #(
 // For whether the fetch stage is holding the memory bus
 reg mem_fetch_busy;
 
-function automatic fetch_should_start();
+function automatic fetch_should_start(input [1:0] fetch_state);
     fetch_should_start =
         fetch_state == STATE_IDLE ||
         fetch_state == STATE_RESETTING;
 endfunction
 
-function automatic decode_should_start();
+function automatic decode_should_start(input [1:0] fetch_state, decode_state);
     decode_should_start =
         fetch_state == STATE_COMPLETE &&
         decode_state == STATE_IDLE;
 endfunction
 
-function automatic exec_should_start();
+function automatic exec_should_start(input [1:0] decode_state, exec_state);
     exec_should_start =
         decode_state == STATE_COMPLETE &&
         (exec_state == STATE_IDLE || exec_state == STATE_RESETTING);
@@ -164,7 +164,7 @@ function automatic exec_should_start();
     // this function).
 endfunction
 
-function automatic wb_should_start();
+function automatic wb_should_start(input [1:0] exec_state, wb_state);
     wb_should_start =
         exec_state == STATE_COMPLETE &&
         (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
@@ -189,17 +189,17 @@ always @ (posedge clk or posedge rst) begin
     end
 
     else begin
-        if (fetch_should_start())
+        if (fetch_should_start(fetch_state))
             fetch_en <= 1;
 
-        if (decode_should_start()) begin
+        if (decode_should_start(fetch_state, decode_state)) begin
             decode_inst <= fetch_inst;
             decode_en <= 1;
             fetch_en <= 0;
             pc <= pc + 2;
         end
 
-        if (exec_should_start()) begin
+        if (exec_should_start(decode_state, exec_state)) begin
             exec_op <= decode_op;
             exec_addr_in <= decode_addr;
             exec_reg_addr <= decode_reg0;
@@ -244,7 +244,7 @@ always @ (posedge clk or posedge rst) begin
             endcase
         end
 
-        if (wb_should_start()) begin
+        if (wb_should_start(exec_state, wb_state)) begin
             exec_en <= 0;
             wb_op <= exec_op;
             wb_reg_addr <= exec_reg_addr;

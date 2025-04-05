@@ -70,7 +70,7 @@ reg [ADDR_WIDTH+DATA_WIDTH-1:0] reg_data [0:CELL_CNT-1];
 
 integer i;
 always @ (*) begin
-    for (i = 0; i < 16; i = i + 1) begin
+    for (i = 0; i < CELL_CNT; i = i + 1) begin
         reg_data[i] = reg_data_packed[(ADDR_WIDTH+DATA_WIDTH)*i +: (ADDR_WIDTH+DATA_WIDTH)];
     end
 end
