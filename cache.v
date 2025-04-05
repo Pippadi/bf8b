@@ -97,10 +97,15 @@ reg [0:CELL_CNT-1] tempEnables;
 reg tempHit;
 reg [DATA_WIDTH-1:0] tempDataOut;
 
+// We don't want to spend a cycle shifting in and out the same data at the
+// front of the shift register, so we keep track of the previous address
+reg [ADDR_WIDTH-1:0] prevAddr;
+
 // Give the shift register a cycle to shift in data
 reg shiftCycle;
 
 always @ (posedge clk) begin
+    prevAddr <= addr;
     if (~shiftCycle) begin
         tempEnables = {CELL_CNT{1'b1}};
         tempHit = 0;
@@ -124,7 +129,7 @@ always @ (posedge clk) begin
 
         // Shift in the requested data to make it the least aged, overwriting
         // its old position in the cache
-        else if (tempHit) begin
+        else if (tempHit && addr != prevAddr) begin
             d_shiftin <= {addr, tempDataOut};
             enables <= tempEnables;
             shiftCycle <= 1;
