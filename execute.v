@@ -11,16 +11,16 @@ module exec
     input en,
     input clk,
     input [3:0] op,
-    input [7:0] val1,
-    input [7:0] val2,
-    input [7:0] addr_in,
+    input [7:0] reg0,
+    input [7:0] reg1,
+    input [7:0] imm,
     input [7:0] mem_data_in,
     input mem_ready,
     output reg [7:0] val_out,
     output reg [7:0] mem_addr,
     output reg [7:0] mem_data_out,
     output reg mem_req,
-    output reg we,
+    output reg mem_we,
     output reg ready
 );
 
@@ -30,11 +30,11 @@ always @ (posedge clk or posedge en) begin
     if (en) begin
         if (op == OP_LOD || op == OP_STR) begin
             if (~cycle) begin
-                mem_addr <= addr_in;
-                we <= op == OP_STR;
-                mem_data_out <= val1;
-                cycle <= 2'b01;
+                mem_addr <= reg1 + imm;
+                mem_we <= op == OP_STR;
+                mem_data_out <= reg0;
                 mem_req <= 1;
+                cycle <= 2'b01;
             end else if (mem_ready) begin
                 mem_req <= 0;
                 ready <= 1;
@@ -45,13 +45,13 @@ always @ (posedge clk or posedge en) begin
         else begin
             case(op)
                 OP_ADD:
-                    val_out <= val1 + val2;
+                    val_out <= reg0 + reg1;
                 OP_ADDI:
-                    val_out <= val1 + val2;
+                    val_out <= reg0 + imm;
                 OP_LODI:
-                    val_out <= val1;
+                    val_out <= imm;
                 OP_NAND:
-                    val_out <= ~(val1 & val2);
+                    val_out <= ~(reg0 & reg1);
             endcase
             ready <= 1;
         end
@@ -60,7 +60,8 @@ always @ (posedge clk or posedge en) begin
     else begin
         ready <= 0;
         cycle <= 0;
-        we <= 0;
+        mem_req <= 0;
+        mem_we <= 0;
     end
 end
 

@@ -59,7 +59,6 @@ fetch Fetch (
 reg decode_en;
 reg [15:0] decode_inst;
 wire decode_ready;
-wire [7:0] decode_addr;
 wire [7:0] decode_imm;
 wire [3:0] decode_op;
 wire [3:0] decode_reg0, decode_reg1, decode_reg2;
@@ -67,12 +66,14 @@ wire [1:0] decode_state;
 
 assign decode_state = {decode_en, decode_ready};
 
-decode #(.OP_LODI(OP_LODI)) Decode (
+decode #(
+    .OP_JMP(OP_JMP),
+    .OP_LODI(OP_LODI)
+) Decode (
     .en(decode_en),
     .clk(clk),
     .inst(decode_inst),
     .op(decode_op),
-    .addr(decode_addr),
     .imm(decode_imm),
     .reg0(decode_reg0),
     .reg1(decode_reg1),
@@ -82,15 +83,15 @@ decode #(.OP_LODI(OP_LODI)) Decode (
 
 reg exec_en;
 reg [3:0] exec_op;
-reg [3:0] exec_reg_addr;
-reg [7:0] exec_addr_in;
-reg [7:0] exec_val1_in;
-reg [7:0] exec_val2_in;
+reg [3:0] exec_wb_addr;
+reg [7:0] exec_reg0_in;
+reg [7:0] exec_reg1_in;
+reg [7:0] exec_imm_in;
 wire [7:0] exec_data_out;
 wire exec_ready;
 
-wire [7:0] exec_addr;
-wire exec_we, exec_mem_req;
+wire [7:0] exec_mem_addr;
+wire exec_mem_we, exec_mem_req;
 reg exec_mem_ready;
 wire [7:0] exec_val_out;
 wire [1:0] exec_state;
@@ -105,16 +106,16 @@ exec #(
     .en(exec_en),
     .clk(clk),
     .op(exec_op),
-    .val1(exec_val1_in),
-    .val2(exec_val2_in),
-    .addr_in(exec_addr_in),
+    .reg0(exec_reg0_in),
+    .reg1(exec_reg1_in),
+    .imm(exec_imm_in),
     .mem_ready(exec_mem_ready),
     .mem_data_in(data),
     .val_out(exec_val_out),
-    .mem_addr(exec_addr),
+    .mem_addr(exec_mem_addr),
     .mem_data_out(exec_data_out),
     .mem_req(exec_mem_req),
-    .we(exec_we),
+    .mem_we(exec_mem_we),
     .ready(exec_ready)
 );
 
@@ -140,7 +141,7 @@ writeback #(
 );
 
 // For whether the fetch stage is holding the memory bus
-reg mem_fetch_busy;
+reg mem_mux_fetch;
 
 function automatic fetch_should_start(input [1:0] fetch_state);
     fetch_should_start =
@@ -185,7 +186,7 @@ always @ (posedge clk or posedge rst) begin
         decode_en = 0;
         exec_en = 0;
         wb_en = 0;
-        mem_fetch_busy = 0;
+        mem_mux_fetch = 0;
     end
 
     else begin
@@ -201,53 +202,31 @@ always @ (posedge clk or posedge rst) begin
 
         if (exec_should_start(decode_state, exec_state)) begin
             exec_op <= decode_op;
-            exec_addr_in <= decode_addr;
-            exec_reg_addr <= decode_reg0;
+            exec_wb_addr <= decode_reg0;
+            exec_imm_in <= decode_imm;
             decode_en <= 0;
 
-            case (decode_op)
-                OP_JMP: begin
-                    pc <= decode_addr;
-                    fetch_en <= 0;
-                    exec_en <= 0;
-                end
-                OP_JEQZ: begin
-                    if (reg_file[decode_reg0] == 0)
-                        pc <= decode_addr;
-                    fetch_en <= 0;
-                    exec_en <= 0;
-                end
-                OP_LOD: exec_en <= 1;
-                OP_STR: begin
-                    exec_val1_in <= reg_file[decode_reg0];
-                    exec_en <= 1;
-                end
-                OP_ADD: begin
-                    exec_val1_in <= reg_file[decode_reg1];
-                    exec_val2_in <= reg_file[decode_reg2];
-                    exec_en <= 1;
-                end
-                OP_ADDI: begin
-                    exec_val1_in <= reg_file[decode_reg1];
-                    exec_val2_in <= decode_imm;
-                    exec_en <= 1;
-                end
-                OP_LODI: begin
-                    exec_val1_in <= decode_imm;
-                    exec_en <= 1;
-                end
-                OP_NAND: begin
-                    exec_val1_in <= reg_file[decode_reg1];
-                    exec_val2_in <= reg_file[decode_reg2];
-                    exec_en <= 1;
-                end
-            endcase
+            if (decode_op == OP_JMP || (decode_op == OP_JEQZ && reg_file[decode_reg1] == 0)) begin
+                pc <= reg_file[decode_reg0] + decode_imm;
+                fetch_en <= 0;
+                exec_en <= 0;
+            end
+            else if (decode_op == OP_STR) begin
+                exec_reg0_in <= reg_file[decode_reg0];
+                exec_reg1_in <= reg_file[decode_reg1];
+                exec_en <= 1;
+            end
+            else begin
+                exec_reg0_in <= reg_file[decode_reg1];
+                exec_reg1_in <= reg_file[decode_reg2];
+                exec_en <= 1;
+            end
         end
 
         if (wb_should_start(exec_state, wb_state)) begin
             exec_en <= 0;
             wb_op <= exec_op;
-            wb_reg_addr <= exec_reg_addr;
+            wb_reg_addr <= exec_wb_addr;
             wb_en <= 1;
         end
         if (wb_state == STATE_COMPLETE) begin
@@ -255,21 +234,21 @@ always @ (posedge clk or posedge rst) begin
         end
 
         // Memory request muxing
-        if (exec_mem_req & ~mem_fetch_busy) begin
+        if (exec_mem_req & ~mem_mux_fetch) begin
             mem_req <= 1;
-            addr <= exec_addr;
+            addr <= exec_mem_addr;
             mem_data_out <= exec_data_out;
-            we <= exec_we;
+            we <= exec_mem_we;
             exec_mem_ready <= mem_ready;
         end else if (fetch_mem_req) begin
             mem_req <= 1;
             addr <= fetch_addr;
-            mem_fetch_busy <= 1;
+            mem_mux_fetch <= 1;
             we <= 0;
             fetch_mem_ready <= mem_ready;
         end else begin
             mem_req <= 0;
-            mem_fetch_busy <= 0;
+            mem_mux_fetch <= 0;
             we <= 0;
             fetch_mem_ready <= 0;
             exec_mem_ready <= 0;

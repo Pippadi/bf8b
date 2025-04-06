@@ -16,20 +16,21 @@ My first Verilog project. I have no idea what I'm doing.
 
 | Mnemonic | Instruction Format | Description |
 |----------|--------------------|-------------|
-| JMP  | `0000  XXXX    [ADDRESS]`   | `PC` to `ADDRESS` |
-| LOD  | `0001 [REG0]   [ADDRESS]`   | Load value at `ADDRESS` into `REG0` |
-| STR  | `0010 [REG0]   [ADDRESS]`   | Store from `REG0` to `ADDRESS` |
+| JMP  | `0000 [REG0]     [OFF8]   ` | `PC` to address `REG0 + OFF` |
+| LOD  | `0001 [REG0] [REG1] [OFF4]` | Load value at address `REG1 + OFF` into `REG0` |
+| STR  | `0010 [REG0] [REG1] [OFF4]` | Store from `REG0` to address `REG1 + OFF` |
 | ADD  | `0011 [REG0] [REG1] [REG2]` | `REG0` = `REG1` + `REG2` |
 | ADDI | `0100 [REG0] [REG1] [IMM4]` | `REG0` = `REG1` + `IMM` |
 | LODI | `0101 [REG0]     [IMM8]   ` | Load `IMM` into `REG0` |
 | NAND | `0110 [REG0] [REG1] [REG2]` | `REG0` = `~(REG1 & REG2)` |
-| JEQZ | `0111 [REG0]   [ADDRESS] `  | `PC` to `ADDRESS` if `REG0` = 0 |
+| JEQZ | `0111 [REG0] [REG1] [OFF4]` | `PC` to address `REG0 + OFF` if `REG1` = 0 |
 
-- `PC` is the program counter.
-- `ADDRESS` is an 8-bit memory address
 - `REGn` is the 4-bit address for one of registers `r0` to `r15`
-- `IMM4` is a 4-bit immediate sign-extended to 8 bits for the concerned operation
+- `PC` is the program counter
+- `OFF8` is a signed 8-bit offset to be added to the target address
+- `OFF4` is a 4-bit offset, sign-extended to 8 bits, to be added to the target address
 - `IMM8` is an 8-bit immediate
+- `IMM4` is a 4-bit immediate, sign-extended to 8 bits, for the concerned operation
 
 ## Programming
 
@@ -43,9 +44,9 @@ Build with the Makefile. This is written to use Icarus Verilog and GTKWave.
 
 ```sh
 make clean
-make          # Compile with `iverilog`
-make 8bit.vcd # Make value change dump (simulation)
-make sim      # View waveforms in GTKWave
+make
+make 8bit.vcd
+make sim
 ```
 
 ## Notes

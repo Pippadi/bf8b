@@ -1,6 +1,7 @@
 module decode
 #(
-    parameter OP_LODI = 4'b0001
+    parameter OP_JMP = 4'b0000,
+    parameter OP_LODI = 4'b0101
 )
 (
     input en,
@@ -10,7 +11,6 @@ module decode
     output reg [3:0] reg0,
     output reg [3:0] reg1,
     output reg [3:0] reg2,
-    output reg [7:0] addr,
     output reg [7:0] imm,
     output reg ready
 );
@@ -21,8 +21,7 @@ always @ (posedge clk) begin
         reg0 <= inst[11:8];
         reg1 <= inst[7:4];
         reg2 <= inst[3:0];
-        addr <= inst[7:0];
-        if (op == OP_LODI)
+        if (inst[15:12] == OP_LODI || inst[15:12] == OP_JMP)
             imm <= inst[7:0];
         else
             imm <= { {5{ inst[3] }},  inst[2:0] };
