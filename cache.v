@@ -101,47 +101,36 @@ reg [DATA_WIDTH-1:0] tempDataOut;
 // front of the shift register, so we keep track of the previous address
 reg [ADDR_WIDTH-1:0] prevAddr;
 
-// Give the shift register a cycle to shift in data
-reg shiftCycle;
-
 always @ (posedge clk) begin
     prevAddr <= addr;
-    if (~shiftCycle) begin
-        tempEnables = {CELL_CNT{1'b1}};
-        tempHit = 0;
-        for (j = 0; j < CELL_CNT; j = j + 1) begin
-            if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
-                tempDataOut = reg_data[j][DATA_WIDTH-1:0];
-                tempHit = 1;
-                // Age all the data above this one
-                tempEnables = tempEnables << (CELL_CNT-j-1);
-            end
+    tempEnables = {CELL_CNT{1'b1}};
+    tempHit = 0;
+    for (j = 0; j < CELL_CNT; j = j + 1) begin
+        if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
+            tempDataOut = reg_data[j][DATA_WIDTH-1:0];
+            tempHit = 1;
+            // Age all the data above this one
+            tempEnables = tempEnables << (CELL_CNT-j-1);
         end
-        hit <= tempHit;
-        data_reg <= tempDataOut;
-
-        // Shift in the requested data to make it the least aged
-        if (we) begin
-            d_shiftin <= {addr, data};
-            enables <= tempEnables;
-            shiftCycle <= 1;
-        end
-
-        // Shift in the requested data to make it the least aged, overwriting
-        // its old position in the cache
-        else if (tempHit && addr != prevAddr) begin
-            d_shiftin <= {addr, tempDataOut};
-            enables <= tempEnables;
-            shiftCycle <= 1;
-        end
-
-        else
-            enables <= {CELL_CNT{1'b0}};
     end
-    else begin
+    hit <= tempHit;
+    data_reg <= tempDataOut;
+
+    // Shift in the requested data to make it the least aged
+    if (we) begin
+        d_shiftin <= {addr, data};
+        enables <= tempEnables;
+    end
+
+    // Shift in the requested data to make it the least aged, overwriting
+    // its old position in the cache
+    else if (tempHit && addr != prevAddr) begin
+        d_shiftin <= {addr, tempDataOut};
+        enables <= tempEnables;
+    end
+
+    else
         enables <= {CELL_CNT{1'b0}};
-        shiftCycle = 0;
-    end
 end
 
 endmodule
