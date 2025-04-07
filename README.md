@@ -11,6 +11,9 @@ My first Verilog project. I have no idea what I'm doing.
 - 8-bit address bus
 - 16 general-purpose registers
 - Up to 16 two-byte instructions (8 implemented so far; nothing set in stone)
+- LRU Instruction cache
+
+Vivado says 549 LUTs and 583 FFs.
 
 ## Instruction set
 
@@ -41,6 +44,7 @@ Ensure that you specify an adequate number of clock pulses in the simulation for
 Dump bytes of `mem` relevant to you to the VCD file with `$dumpvars(0, mem[ADDR])`.
 
 Build with the Makefile. This is written to use Icarus Verilog and GTKWave.
+The latest commits on the `main` branch _should_ synthesize in Vivado as well.
 
 ```sh
 make clean
@@ -50,8 +54,10 @@ make sim
 ```
 
 ## Notes
+
 An 8-bit data bus is a huge bottleneck when fetching 16-bit instructions.
-An LRU instruction cache has been implemented to compensate. Its default size is 8 instructions (each cell is 16-bits).
+Making the memory bus wider would be boring, so an LRU instruction cache has been implemented.
+Its default size is 8 instructions (each cell is 16 bits).
 On-the-fly modification of instructions is not supported, as the fetch stage does not check for consistency between cached instructions and memory.
 
 Basic branch prediction is a future goal.
