@@ -140,9 +140,6 @@ writeback #(
     .ready(wb_ready)
 );
 
-// For whether the fetch stage is holding the memory bus
-reg mem_mux_fetch;
-
 function automatic fetch_should_start(input [1:0] fetch_state);
     fetch_should_start =
         fetch_state == STATE_IDLE ||
@@ -176,6 +173,32 @@ integer i;
 always @ (*) begin
     for (i = 0; i < 16; i = i + 1) begin
         reg_file[i] = packed_reg_file[8*i +: 8];
+    end
+end
+
+// For whether the fetch stage is holding the memory bus
+reg mem_mux_fetch;
+
+// Memory request muxing
+always @ (*) begin
+    if (exec_mem_req & ~mem_mux_fetch) begin
+        mem_req = 1;
+        addr = exec_mem_addr;
+        mem_data_out = exec_data_out;
+        we = exec_mem_we;
+        exec_mem_ready = mem_ready;
+    end else if (fetch_mem_req) begin
+        mem_req = 1;
+        addr = fetch_addr;
+        mem_mux_fetch = 1;
+        we = 0;
+        fetch_mem_ready = mem_ready;
+    end else begin
+        mem_req = 0;
+        mem_mux_fetch = 0;
+        we = 0;
+        fetch_mem_ready = 0;
+        exec_mem_ready = 0;
     end
 end
 
@@ -231,27 +254,6 @@ always @ (posedge clk or posedge rst) begin
         end
         if (wb_state == STATE_COMPLETE) begin
             wb_en <= 0;
-        end
-
-        // Memory request muxing
-        if (exec_mem_req & ~mem_mux_fetch) begin
-            mem_req <= 1;
-            addr <= exec_mem_addr;
-            mem_data_out <= exec_data_out;
-            we <= exec_mem_we;
-            exec_mem_ready <= mem_ready;
-        end else if (fetch_mem_req) begin
-            mem_req <= 1;
-            addr <= fetch_addr;
-            mem_mux_fetch <= 1;
-            we <= 0;
-            fetch_mem_ready <= mem_ready;
-        end else begin
-            mem_req <= 0;
-            mem_mux_fetch <= 0;
-            we <= 0;
-            fetch_mem_ready <= 0;
-            exec_mem_ready <= 0;
         end
     end
 end
