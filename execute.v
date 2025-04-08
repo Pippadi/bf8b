@@ -41,14 +41,15 @@ always @ (posedge clk or posedge en) begin
                 if (op == OP_LOD)
                     val_out <= mem_data_in;
             end
-        end
-        else if (op == OP_ADD || op == OP_ADDI)
+        end else begin
+        if (op == OP_ADD || op == OP_ADDI)
             val_out <= reg0 + (op == OP_ADDI ? imm : reg1);
         else if (op == OP_LODI)
             val_out <= imm;
         else if (op == OP_NAND)
             val_out <= ~(reg0 & reg1);
         ready <= 1;
+    end
     end else begin
         ready <= 0;
         cycle <= 0;
