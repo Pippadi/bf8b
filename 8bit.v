@@ -87,12 +87,16 @@ reg [3:0] exec_wb_addr;
 reg [7:0] exec_reg0_in;
 reg [7:0] exec_reg1_in;
 reg [7:0] exec_imm_in;
+reg [7:0] exec_pc_in;
 wire [7:0] exec_data_out;
 wire exec_ready;
 
 wire [7:0] exec_mem_addr;
 wire exec_mem_we, exec_mem_req;
 reg exec_mem_ready;
+
+wire [7:0] exec_pc_out;
+wire exec_flush_pipeline;
 wire [7:0] exec_val_out;
 wire [1:0] exec_state;
 
@@ -111,11 +115,14 @@ exec #(
     .imm(exec_imm_in),
     .mem_ready(exec_mem_ready),
     .mem_data_in(data),
+    .pc_in(pc),
     .val_out(exec_val_out),
     .mem_addr(exec_mem_addr),
     .mem_data_out(exec_data_out),
     .mem_req(exec_mem_req),
     .mem_we(exec_mem_we),
+    .pc_out(exec_pc_out),
+    .flush_pipeline(exec_flush_pipeline),
     .ready(exec_ready)
 );
 
@@ -229,17 +236,11 @@ always @ (posedge clk or posedge rst) begin
             exec_imm_in <= decode_imm;
             decode_en <= 0;
 
-            if (decode_op == OP_JMP || (decode_op == OP_JEQZ && reg_file[decode_reg1] == 0)) begin
-                pc <= reg_file[decode_reg0] + decode_imm;
-                fetch_en <= 0;
-                exec_en <= 0;
-            end
-            else if (decode_op == OP_STR) begin
+            if (decode_op == OP_STR || decode_op == OP_JMP || decode_op == OP_JEQZ) begin
                 exec_reg0_in <= reg_file[decode_reg0];
                 exec_reg1_in <= reg_file[decode_reg1];
                 exec_en <= 1;
-            end
-            else begin
+            end else begin
                 exec_reg0_in <= reg_file[decode_reg1];
                 exec_reg1_in <= reg_file[decode_reg2];
                 exec_en <= 1;
@@ -248,9 +249,15 @@ always @ (posedge clk or posedge rst) begin
 
         if (wb_should_start(exec_state, wb_state)) begin
             exec_en <= 0;
-            wb_op <= exec_op;
-            wb_reg_addr <= exec_wb_addr;
-            wb_en <= 1;
+            if (exec_flush_pipeline) begin
+                pc <= exec_pc_out;
+                fetch_en <= 0;
+                decode_en <= 0;
+            end else begin
+                wb_op <= exec_op;
+                wb_reg_addr <= exec_wb_addr;
+                wb_en <= 1;
+            end
         end
         if (wb_state == STATE_COMPLETE) begin
             wb_en <= 0;
