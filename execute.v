@@ -49,16 +49,13 @@ always @ (posedge clk or posedge en) begin
         end else begin
             if (op == OP_ADD || op == OP_ADDI)
                 val_out <= reg0 + (op == OP_ADDI ? imm : reg1);
-            else if (op == OP_LODI)
+            if (op == OP_LODI)
                 val_out <= imm;
-            else if (op == OP_NAND)
+            if (op == OP_NAND)
                 val_out <= ~(reg0 & reg1);
-            else if (op == OP_JMP || (op == OP_JEQZ && reg1 == 0)) begin
+            if (op == OP_JMP || (op == OP_JEQZ && reg1 == 0)) begin
                 pc_out <= imm + reg0;
                 flush_pipeline <= 1;
-            end else begin
-                pc_out <= pc_in;
-                flush_pipeline <= 0;
             end
             ready <= 1;
         end
