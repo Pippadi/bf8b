@@ -33,7 +33,7 @@ assign cache_inst = (cache_we) ? inst_out : 16'hzzzz;
 reg [1:0] cycle;
 reg hibyte;
 
-always @ (posedge clk or posedge en) begin
+always @ (posedge clk) begin
     if (~rst & en) begin
         case (cycle)
             2'b00: begin

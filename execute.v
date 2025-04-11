@@ -29,35 +29,41 @@ module exec
     output reg ready
 );
 
-reg cycle;
+reg [1:0] cycle;
 
-always @ (posedge clk or posedge en) begin
-    if (en & ~ready) begin
+always @ (posedge clk) begin
+    if (en) begin
         if (op == OP_LOD || op == OP_STR) begin
-            if (~cycle) begin
+            if (cycle == 0) begin
                 mem_addr <= reg1 + imm;
                 mem_we <= op == OP_STR;
                 mem_data_out <= reg0;
                 mem_req <= 1;
                 cycle <= 1;
-            end else if (mem_ready) begin
+            end
+            if (cycle == 1 && mem_ready) begin
+                cycle <= 2;
                 mem_req <= 0;
-                ready <= 1;
                 if (op == OP_LOD)
                     val_out <= mem_data_in;
             end
+            if (cycle == 2)
+                ready <= 1;
         end else begin
-            if (op == OP_ADD || op == OP_ADDI)
-                val_out <= reg0 + (op == OP_ADDI ? imm : reg1);
-            if (op == OP_LODI)
-                val_out <= imm;
-            if (op == OP_NAND)
-                val_out <= ~(reg0 & reg1);
-            if (op == OP_JMP || (op == OP_JEQZ && reg1 == 0)) begin
-                pc_out <= imm + reg0;
-                flush_pipeline <= 1;
-            end
-            ready <= 1;
+            if (cycle == 0) begin
+                if (op == OP_ADD || op == OP_ADDI)
+                    val_out <= reg0 + (op == OP_ADDI ? imm : reg1);
+                if (op == OP_LODI)
+                    val_out <= imm;
+                if (op == OP_NAND)
+                    val_out <= ~(reg0 & reg1);
+                if (op == OP_JMP || (op == OP_JEQZ && reg1 == 0)) begin
+                    pc_out <= imm + reg0;
+                    flush_pipeline <= 1;
+                end
+                cycle <= 1;
+            end else
+                ready <= 1;
         end
     end else begin
         ready <= 0;

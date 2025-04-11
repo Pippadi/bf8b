@@ -56,6 +56,7 @@ fetch Fetch (
     .ready(fetch_ready)
 );
 
+reg start_decode;
 reg decode_en;
 reg [15:0] decode_inst;
 wire decode_ready;
@@ -81,6 +82,7 @@ decode #(
     .ready(decode_ready)
 );
 
+reg start_exec;
 reg exec_en;
 reg [3:0] exec_op;
 reg [3:0] exec_wb_addr;
@@ -126,6 +128,7 @@ exec #(
     .ready(exec_ready)
 );
 
+reg start_wb;
 reg wb_en;
 reg [3:0] wb_op;
 reg [3:0] wb_reg_addr;
@@ -217,6 +220,9 @@ always @ (posedge clk or posedge rst) begin
         exec_en = 0;
         wb_en = 0;
         mem_mux_fetch = 0;
+        start_decode <= 0;
+        start_exec <= 0;
+        start_wb <= 0;
     end
 
     else begin
@@ -225,30 +231,38 @@ always @ (posedge clk or posedge rst) begin
 
         if (decode_should_start(fetch_state, decode_state)) begin
             decode_inst <= fetch_inst;
-            decode_en <= 1;
+            start_decode <= 1;
             fetch_en <= 0;
             pc <= pc + 2;
         end
 
-        if (exec_should_start(decode_state, exec_state)) begin
+        if (start_decode) begin
+            decode_en <= 1;
+            start_decode <= 0;
+        end
+
+        if (decode_state == STATE_COMPLETE && (exec_state == STATE_IDLE || exec_state == STATE_RESETTING)) begin
             exec_op <= decode_op;
             exec_wb_addr <= decode_reg0;
             exec_imm_in <= decode_imm;
+            start_exec <= 1;
             decode_en <= 0;
 
             if (decode_op == OP_STR || decode_op == OP_JMP || decode_op == OP_JEQZ) begin
                 exec_reg0_in <= reg_file[decode_reg0];
                 exec_reg1_in <= reg_file[decode_reg1];
-                exec_en <= 1;
             end else begin
                 exec_reg0_in <= reg_file[decode_reg1];
                 exec_reg1_in <= reg_file[decode_reg2];
-                exec_en <= 1;
             end
         end
 
+        if (start_exec) begin
+            exec_en <= 1;
+            start_exec <= 0;
+        end
+
         if (wb_should_start(exec_state, wb_state)) begin
-            exec_en <= 0;
             if (exec_flush_pipeline) begin
                 pc <= exec_pc_out;
                 fetch_en <= 0;
@@ -256,8 +270,13 @@ always @ (posedge clk or posedge rst) begin
             end else begin
                 wb_op <= exec_op;
                 wb_reg_addr <= exec_wb_addr;
-                wb_en <= 1;
             end
+            start_wb <= 1;
+            exec_en <= 0;
+        end
+        if (start_wb) begin
+            wb_en <= 1;
+            start_wb <= 0;
         end
         if (wb_state == STATE_COMPLETE) begin
             wb_en <= 0;
