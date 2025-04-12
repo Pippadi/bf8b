@@ -13,7 +13,8 @@ module eightbit
     input rst,
     input clk,
     input mem_ready,
-    inout [7:0] data,
+    input [7:0] data_in,
+    output reg [7:0] data_out,
     output reg [7:0] addr,
     output reg we,
     output reg mem_req
@@ -29,9 +30,6 @@ wire [8*16-1:0] packed_reg_file;
 
 reg [7:0] a, b;
 reg [7:0] pc;
-reg [7:0] mem_data_out;
-
-assign data = (we) ? mem_data_out : 8'hzz;
 
 reg fetch_en;
 reg fetch_mem_ready;
@@ -47,7 +45,7 @@ fetch Fetch (
     .rst(rst),
     .en(fetch_en),
     .clk(clk),
-    .data_in(data),
+    .data_in(data_in),
     .pc(pc),
     .mem_ready(fetch_mem_ready),
     .addr(fetch_addr),
@@ -116,7 +114,7 @@ exec #(
     .reg1(exec_reg1_in),
     .imm(exec_imm_in),
     .mem_ready(exec_mem_ready),
-    .mem_data_in(data),
+    .mem_data_in(data_in),
     .pc_in(pc),
     .val_out(exec_val_out),
     .mem_addr(exec_mem_addr),
@@ -194,7 +192,7 @@ always @ (*) begin
     if (exec_mem_req & ~mem_mux_fetch) begin
         mem_req = 1;
         addr = exec_mem_addr;
-        mem_data_out = exec_data_out;
+        data_out = exec_data_out;
         we = exec_mem_we;
         exec_mem_ready = mem_ready;
     end else if (fetch_mem_req) begin
@@ -241,7 +239,7 @@ always @ (posedge clk or posedge rst) begin
             start_decode <= 0;
         end
 
-        if (decode_state == STATE_COMPLETE && (exec_state == STATE_IDLE || exec_state == STATE_RESETTING)) begin
+        if (exec_should_start(decode_state, exec_state)) begin
             exec_op <= decode_op;
             exec_wb_addr <= decode_reg0;
             exec_imm_in <= decode_imm;
