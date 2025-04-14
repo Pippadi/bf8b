@@ -12,12 +12,10 @@ module eightbit
 (
     input rst,
     input clk,
-    input mem_ready,
     input [7:0] data_in,
     output reg [7:0] data_out,
     output reg [7:0] addr,
-    output reg we,
-    output reg mem_req
+    output reg we
 );
 
 localparam STATE_IDLE = 2'b00;
@@ -186,27 +184,36 @@ end
 
 // For whether the fetch stage is holding the memory bus
 reg mem_mux_fetch;
+reg mem_cycle;
 
 // Memory request muxing
-always @ (*) begin
+always @ (posedge clk) begin
     if (exec_mem_req & ~mem_mux_fetch) begin
-        mem_req = 1;
-        addr = exec_mem_addr;
-        data_out = exec_data_out;
-        we = exec_mem_we;
-        exec_mem_ready = mem_ready;
+        if (~mem_cycle) begin
+            addr <= exec_mem_addr;
+            data_out <= exec_data_out;
+            we <= exec_mem_we;
+            exec_mem_ready <= 0;
+            mem_cycle <= 1;
+        end else begin
+            exec_mem_ready <= 1;
+            we <= 0;
+        end
     end else if (fetch_mem_req) begin
-        mem_req = 1;
-        addr = fetch_addr;
-        mem_mux_fetch = 1;
-        we = 0;
-        fetch_mem_ready = mem_ready;
+        if (~mem_cycle) begin
+            addr <= fetch_addr;
+            we <= 0;
+            mem_mux_fetch <= 1;
+            fetch_mem_ready <= 0;
+            mem_cycle <= 1;
+        end else
+            fetch_mem_ready <= 1;
     end else begin
-        mem_req = 0;
-        mem_mux_fetch = 0;
-        we = 0;
-        fetch_mem_ready = 0;
-        exec_mem_ready = 0;
+        mem_cycle <= 0;
+        mem_mux_fetch <= 0;
+        we <= 0;
+        fetch_mem_ready <= 0;
+        exec_mem_ready <= 0;
     end
 end
 

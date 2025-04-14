@@ -7,20 +7,16 @@ reg clk;
 
 reg [7:0] mem [0:255];
 reg [7:0] data_out;
-reg mem_ready;
 wire [7:0] addr;
 wire [7:0] data_in;
 wire we;
-wire mem_req;
 
 eightbit eb(
     .rst(rst),
     .clk(clk),
     .addr(addr),
-    .mem_ready(mem_ready),
     .data_in(data_out),
     .data_out(data_in),
-    .mem_req(mem_req),
     .we(we)
 );
 
@@ -90,13 +86,9 @@ initial begin
 end
 
 always @(posedge clk) begin
-    if (mem_req & ~mem_ready) begin
-        mem_ready <= 1;
         if (we)
             mem[addr] <= data_in;
         data_out <= mem[addr];
-        end else
-        mem_ready <= 0;
 end
 
 endmodule;
