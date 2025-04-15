@@ -140,7 +140,7 @@ writeback #(
 ) Writeback (
     .en(wb_en),
     .clk(clk),
-    .op(exec_op),
+    .op(wb_op),
     .reg_addr(wb_reg_addr),
     .val(wb_val),
     .regs(packed_reg_file),
