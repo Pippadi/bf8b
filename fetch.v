@@ -24,11 +24,10 @@ cache #(
     .clk(clk),
     .we(cache_we),
     .addr(pc),
-    .data(cache_inst),
+    .data_in(inst_out),
+    .data_out(cache_inst),
     .hit(cache_hit)
 );
-
-assign cache_inst = (cache_we) ? inst_out : 16'hzzzz;
 
 reg [1:0] cycle;
 reg hibyte;

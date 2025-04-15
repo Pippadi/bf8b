@@ -55,12 +55,10 @@ module cache
     input clk,
     input we,
     input [ADDR_WIDTH-1:0] addr,
-    inout [DATA_WIDTH-1:0] data,
+    input [DATA_WIDTH-1:0] data_in,
+    output reg [DATA_WIDTH-1:0] data_out,
     output reg hit
 );
-
-reg [DATA_WIDTH-1:0] data_reg;
-assign data = (we) ? 'hz : data_reg;
 
 reg [0:CELL_CNT-1] enables;
 
@@ -114,11 +112,11 @@ always @ (posedge clk) begin
         end
     end
     hit <= tempHit;
-    data_reg <= tempDataOut;
+    data_out <= tempDataOut;
 
     // Shift in the requested data to make it the least aged
     if (we) begin
-        d_shiftin <= {addr, data};
+        d_shiftin <= {addr, data_in};
         enables <= tempEnables;
     end
 
