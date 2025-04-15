@@ -22,6 +22,7 @@ reg [1:0] mem_cycle;
 integer i;
 
 always @ (*) begin
+    mem_mux_holder_temp = 0;
     for (i = 0; i < CLIENT_CNT; i = i + 1) begin
         if (requests[i])
             mem_mux_holder_temp = i;

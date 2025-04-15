@@ -17,7 +17,6 @@ module exec
     input [7:0] reg1,
     input [7:0] imm,
     input [7:0] mem_data_in,
-    input [7:0] pc_in,
     input mem_ready,
     output reg [7:0] pc_out,
     output reg [7:0] val_out,

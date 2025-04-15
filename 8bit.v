@@ -85,7 +85,6 @@ reg [3:0] exec_wb_addr;
 reg [7:0] exec_reg0_in;
 reg [7:0] exec_reg1_in;
 reg [7:0] exec_imm_in;
-reg [7:0] exec_pc_in;
 wire [7:0] exec_data_out;
 wire exec_ready;
 
@@ -113,7 +112,6 @@ exec #(
     .imm(exec_imm_in),
     .mem_ready(exec_mem_ready),
     .mem_data_in(data_in),
-    .pc_in(pc),
     .val_out(exec_val_out),
     .mem_addr(exec_mem_addr),
     .mem_data_out(exec_data_out),
