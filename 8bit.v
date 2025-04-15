@@ -13,9 +13,9 @@ module eightbit
     input rst,
     input clk,
     input [7:0] data_in,
-    output reg [7:0] data_out,
-    output reg [7:0] addr,
-    output reg we
+    output [7:0] data_out,
+    output [7:0] addr,
+    output we
 );
 
 localparam STATE_IDLE = 2'b00;
@@ -30,7 +30,7 @@ reg [7:0] a, b;
 reg [7:0] pc;
 
 reg fetch_en;
-reg fetch_mem_ready;
+wire fetch_mem_ready;
 wire fetch_mem_req;
 wire fetch_ready;
 wire [7:0] fetch_addr;
@@ -91,7 +91,7 @@ wire exec_ready;
 
 wire [7:0] exec_mem_addr;
 wire exec_mem_we, exec_mem_req;
-reg exec_mem_ready;
+wire exec_mem_ready;
 
 wire [7:0] exec_pc_out;
 wire exec_flush_pipeline;
@@ -147,20 +147,18 @@ writeback #(
     .ready(wb_ready)
 );
 
-mem_if MemoryInterface (
+mem_if #(
+    .CLIENT_CNT(2)
+) MemoryInterface (
     .rst(rst),
     .clk(clk),
-    .data_in(data_in),
-    .exec_mem_req(exec_mem_req),
-    .exec_mem_addr(exec_mem_addr),
-    .exec_mem_we(exec_mem_we),
-    .exec_data_out(exec_data_out),
-    .fetch_mem_req(fetch_mem_req),
-    .fetch_addr(fetch_addr),
+    .requests({exec_mem_req, fetch_mem_req}),
+    .addrs({exec_mem_addr, fetch_addr}),
+    .wes({exec_mem_we, 1'b0}),
+    .data_outs({exec_data_out, 8'b0}),
+    .readies({exec_mem_ready, fetch_mem_ready}),
     .data_out(data_out),
     .addr(addr),
-    .exec_mem_ready(exec_mem_ready),
-    .fetch_mem_ready(fetch_mem_ready),
     .we(we)
 );
 
