@@ -127,6 +127,7 @@ exec #(
 reg start_wb;
 reg wb_en;
 reg [3:0] wb_op;
+reg [7:0] wb_val;
 reg [3:0] wb_reg_addr;
 wire wb_ready;
 wire [1:0] wb_state;
@@ -141,7 +142,7 @@ writeback #(
     .clk(clk),
     .op(exec_op),
     .reg_addr(wb_reg_addr),
-    .val(exec_val_out),
+    .val(wb_val),
     .regs(packed_reg_file),
     .ready(wb_ready)
 );
@@ -182,49 +183,57 @@ always @ (*) begin
     end
 end
 
-// For whether the fetch stage is holding the memory bus
-reg mem_mux_fetch;
-reg mem_cycle;
+// For whether the exec stage is holding the memory bus
+reg mem_mux_exec;
+reg [1:0] mem_cycle;
 
 // Memory request muxing
 always @ (posedge clk) begin
-    if (exec_mem_req & ~mem_mux_fetch) begin
-        if (~mem_cycle) begin
-            addr <= exec_mem_addr;
-            data_out <= exec_data_out;
-            we <= exec_mem_we;
-            exec_mem_ready <= 0;
-            mem_cycle <= 1;
-        end else begin
-            exec_mem_ready <= 1;
-            we <= 0;
+    case (mem_cycle)
+        0: begin
+            if (exec_mem_req || fetch_mem_req) begin
+                addr <= exec_mem_req ? exec_mem_addr : fetch_addr;
+                we <= exec_mem_req ? exec_mem_we : 0;
+                mem_mux_exec = exec_mem_req;
+                data_out <= exec_data_out;
+                exec_mem_ready <= 0;
+                fetch_mem_ready <= 0;
+                mem_cycle <= 1;
+            end else begin
+                mem_cycle <= 0;
+                mem_mux_exec <= 0;
+                we <= 0;
+                fetch_mem_ready <= 0;
+                exec_mem_ready <= 0;
+            end
         end
-    end else if (fetch_mem_req) begin
-        if (~mem_cycle) begin
-            addr <= fetch_addr;
+        1: begin
+            if (mem_mux_exec)
+                exec_mem_ready <= 1;
+            else
+                fetch_mem_ready <= 1;
             we <= 0;
-            mem_mux_fetch <= 1;
-            fetch_mem_ready <= 0;
-            mem_cycle <= 1;
-        end else
-            fetch_mem_ready <= 1;
-    end else begin
-        mem_cycle <= 0;
-        mem_mux_fetch <= 0;
-        we <= 0;
-        fetch_mem_ready <= 0;
-        exec_mem_ready <= 0;
-    end
+            mem_cycle <= 2;
+        end
+        2: begin
+            if ((mem_mux_exec & ~exec_mem_req) | (~mem_mux_exec & ~fetch_mem_req)) begin
+                exec_mem_ready <= 0;
+                fetch_mem_ready <= 0;
+                mem_cycle <= 0;
+            end
+        end
+    endcase
 end
 
 always @ (posedge clk or posedge rst) begin
     if (rst) begin
-        pc = 8'h00;
-        fetch_en = 0;
-        decode_en = 0;
-        exec_en = 0;
-        wb_en = 0;
-        mem_mux_fetch = 0;
+        pc <= 8'h00;
+        fetch_en <= 0;
+        decode_en <= 0;
+        exec_en <= 0;
+        wb_en <= 0;
+        mem_mux_exec <= 0;
+        mem_cycle <= 0;
         start_decode <= 0;
         start_exec <= 0;
         start_wb <= 0;
@@ -275,8 +284,9 @@ always @ (posedge clk or posedge rst) begin
             end else begin
                 wb_op <= exec_op;
                 wb_reg_addr <= exec_wb_addr;
+                wb_val <= exec_val_out;
+                start_wb <= 1;
             end
-            start_wb <= 1;
             exec_en <= 0;
         end
         if (start_wb) begin

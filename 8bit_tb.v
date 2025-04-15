@@ -81,7 +81,7 @@ initial begin
     rst = 0;
     clk = 0;
 
-    for (i = 0; i < 256; i = i + 1)
+    for (i = 0; i < 512; i = i + 1)
         pulseClk();
 end
 
