@@ -147,6 +147,23 @@ writeback #(
     .ready(wb_ready)
 );
 
+mem_if MemoryInterface (
+    .rst(rst),
+    .clk(clk),
+    .data_in(data_in),
+    .exec_mem_req(exec_mem_req),
+    .exec_mem_addr(exec_mem_addr),
+    .exec_mem_we(exec_mem_we),
+    .exec_data_out(exec_data_out),
+    .fetch_mem_req(fetch_mem_req),
+    .fetch_addr(fetch_addr),
+    .data_out(data_out),
+    .addr(addr),
+    .exec_mem_ready(exec_mem_ready),
+    .fetch_mem_ready(fetch_mem_ready),
+    .we(we)
+);
+
 function automatic fetch_should_start(input [1:0] fetch_state);
     fetch_should_start =
         fetch_state == STATE_IDLE ||
@@ -183,57 +200,13 @@ always @ (*) begin
     end
 end
 
-// For whether the exec stage is holding the memory bus
-reg mem_mux_exec;
-reg [1:0] mem_cycle;
-
-// Memory request muxing
 always @ (posedge clk) begin
-    case (mem_cycle)
-        0: begin
-            if (exec_mem_req || fetch_mem_req) begin
-                addr <= exec_mem_req ? exec_mem_addr : fetch_addr;
-                we <= exec_mem_req ? exec_mem_we : 0;
-                mem_mux_exec = exec_mem_req;
-                data_out <= exec_data_out;
-                exec_mem_ready <= 0;
-                fetch_mem_ready <= 0;
-                mem_cycle <= 1;
-            end else begin
-                mem_cycle <= 0;
-                mem_mux_exec <= 0;
-                we <= 0;
-                fetch_mem_ready <= 0;
-                exec_mem_ready <= 0;
-            end
-        end
-        1: begin
-            if (mem_mux_exec)
-                exec_mem_ready <= 1;
-            else
-                fetch_mem_ready <= 1;
-            we <= 0;
-            mem_cycle <= 2;
-        end
-        2: begin
-            if ((mem_mux_exec & ~exec_mem_req) | (~mem_mux_exec & ~fetch_mem_req)) begin
-                exec_mem_ready <= 0;
-                fetch_mem_ready <= 0;
-                mem_cycle <= 0;
-            end
-        end
-    endcase
-end
-
-always @ (posedge clk or posedge rst) begin
     if (rst) begin
         pc <= 8'h00;
         fetch_en <= 0;
         decode_en <= 0;
         exec_en <= 0;
         wb_en <= 0;
-        mem_mux_exec <= 0;
-        mem_cycle <= 0;
         start_decode <= 0;
         start_exec <= 0;
         start_wb <= 0;

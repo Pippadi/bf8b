@@ -7,6 +7,7 @@ SRCS += decode.v
 SRCS += execute.v
 SRCS += writeback.v
 SRCS += cache.v
+SRCS += mem_if.v
 
 eightbit:
 	iverilog -g2012 ${SRCS} -o eightbit

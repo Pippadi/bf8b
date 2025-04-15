@@ -76,19 +76,25 @@ initial begin
         $dumpvars(0, eb.Fetch.ICache.ShiftReg.q[i]);
     end
 
-    rst = 1;
-    #1;
-    rst = 0;
     clk = 0;
+    fork
+        begin
+            rst = 1;
+            #2;
+            rst = 0;
+        end
 
-    for (i = 0; i < 512; i = i + 1)
-        pulseClk();
+        begin
+            for (i = 0; i < 512; i = i + 1)
+                pulseClk();
+        end
+    join
 end
 
 always @(posedge clk) begin
-        if (we)
-            mem[addr] <= data_in;
-        data_out <= mem[addr];
+    if (we)
+        mem[addr] <= data_in;
+    data_out <= mem[addr];
 end
 
 endmodule;
