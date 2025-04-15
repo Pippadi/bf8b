@@ -21,6 +21,13 @@ reg [$clog2(CLIENT_CNT)-1:0] mem_mux_holder_temp;
 reg [1:0] mem_cycle;
 integer i;
 
+always @ (*) begin
+    for (i = 0; i < CLIENT_CNT; i = i + 1) begin
+        if (requests[i])
+            mem_mux_holder_temp = i;
+    end
+end
+
 always @ (posedge clk) begin
     if (rst) begin
         mem_mux_holder <= 0;
@@ -28,32 +35,26 @@ always @ (posedge clk) begin
         readies <= 0;
     end else begin
         case (mem_cycle)
-            0: begin
-                if (requests) begin
-                    for (i = 0; i < CLIENT_CNT; i = i + 1) begin
-                        if (requests[i])
-                            mem_mux_holder_temp = i;
-                    end
-                    mem_mux_holder <= mem_mux_holder_temp;
-                    addr <= addrs[mem_mux_holder_temp*8 +: 8];
-                    we <= wes[mem_mux_holder_temp];
-                    data_out <= data_outs[mem_mux_holder_temp*8 +: 8];
-                    mem_cycle <= 1;
-                end else begin
-                    mem_mux_holder <= 0;
-                    we <= 0;
-                end
+            0: if (requests) begin
+                mem_mux_holder <= mem_mux_holder_temp;
+                addr <= addrs[mem_mux_holder_temp*8 +: 8];
+                we <= wes[mem_mux_holder_temp];
+                data_out <= data_outs[mem_mux_holder_temp*8 +: 8];
+                mem_cycle <= 1;
+            end else begin
+                mem_mux_holder <= 0;
+                we <= 0;
             end
+
             1: begin
                 readies[mem_mux_holder] <= 1;
                 we <= 0;
                 mem_cycle <= 2;
             end
-            2: begin
-                if (~requests[mem_mux_holder]) begin
-                    readies <= 0;
-                    mem_cycle <= 0;
-                end
+
+            2: if (~requests[mem_mux_holder]) begin
+                readies <= 0;
+                mem_cycle <= 0;
             end
         endcase
     end

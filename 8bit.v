@@ -171,7 +171,7 @@ endfunction
 function automatic decode_should_start(input [1:0] fetch_state, decode_state);
     decode_should_start =
         fetch_state == STATE_COMPLETE &&
-        decode_state == STATE_IDLE;
+        (decode_state == STATE_IDLE || decode_state == STATE_RESETTING);
 endfunction
 
 function automatic exec_should_start(input [1:0] decode_state, exec_state);
@@ -200,7 +200,7 @@ end
 
 always @ (posedge clk) begin
     if (rst) begin
-        pc <= 8'h00;
+        pc <= 0;
         fetch_en <= 0;
         decode_en <= 0;
         exec_en <= 0;
@@ -248,22 +248,23 @@ always @ (posedge clk) begin
         end
 
         if (wb_should_start(exec_state, wb_state)) begin
+            wb_op <= exec_op;
+            wb_reg_addr <= exec_wb_addr;
+            wb_val <= exec_val_out;
+            exec_en <= 0;
             if (exec_flush_pipeline) begin
                 pc <= exec_pc_out;
                 fetch_en <= 0;
                 decode_en <= 0;
-            end else begin
-                wb_op <= exec_op;
-                wb_reg_addr <= exec_wb_addr;
-                wb_val <= exec_val_out;
+            end else
                 start_wb <= 1;
-            end
-            exec_en <= 0;
         end
+
         if (start_wb) begin
             wb_en <= 1;
             start_wb <= 0;
         end
+
         if (wb_state == STATE_COMPLETE) begin
             wb_en <= 0;
         end

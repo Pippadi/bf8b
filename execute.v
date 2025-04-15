@@ -34,6 +34,8 @@ reg [1:0] cycle;
 always @ (posedge clk) begin
     if (en) begin
         if (op == OP_LOD || op == OP_STR) begin
+            ready <= cycle == 2;
+
             if (cycle == 0) begin
                 mem_addr <= reg1 + imm;
                 mem_we <= op == OP_STR;
@@ -41,15 +43,15 @@ always @ (posedge clk) begin
                 mem_req <= 1;
                 cycle <= 1;
             end
+
             if (cycle == 1 && mem_ready) begin
                 cycle <= 2;
                 mem_req <= 0;
-                if (op == OP_LOD)
-                    val_out <= mem_data_in;
+                val_out <= mem_data_in;
             end
-            if (cycle == 2)
-                ready <= 1;
         end else begin
+            ready <= cycle;
+
             if (cycle == 0) begin
                 if (op == OP_ADD || op == OP_ADDI)
                     val_out <= reg0 + (op == OP_ADDI ? imm : reg1);
@@ -62,14 +64,12 @@ always @ (posedge clk) begin
                     flush_pipeline <= 1;
                 end
                 cycle <= 1;
-            end else
-                ready <= 1;
+            end
         end
     end else begin
         ready <= 0;
         cycle <= 0;
         mem_req <= 0;
-        mem_we <= 0;
         flush_pipeline <= 0;
     end
 end
