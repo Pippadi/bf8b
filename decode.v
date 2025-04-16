@@ -15,20 +15,19 @@ module decode
     output reg ready
 );
 
-always @ (posedge clk) begin
-    if (en) begin
-        op <= inst[15:12];
-        reg0 <= inst[11:8];
-        reg1 <= inst[7:4];
-        reg2 <= inst[3:0];
-        if (inst[15:12] == OP_LODI || inst[15:12] == OP_JMP)
-            imm <= inst[7:0];
-        else
-            imm <= { {5{ inst[3] }},  inst[2:0] };
-        ready <= 1;
-    end
+always @ (*) begin
+    op = inst[15:12];
+    reg0 = inst[11:8];
+    reg1 = inst[7:4];
+    reg2 = inst[3:0];
+    if (inst[15:12] == OP_LODI || inst[15:12] == OP_JMP)
+        imm = inst[7:0];
     else
-        ready <= 0;
+        imm = { {5{ inst[3] }},  inst[2:0] };
+end
+
+always @ (posedge clk) begin
+    ready <= en;
 end
 
 endmodule
