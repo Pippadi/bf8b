@@ -89,11 +89,23 @@ shift_reg #(
 
 integer j;
 
-// Temporary variables for combinational logic in order to do nonblocking
+// Temporary variable for combinational logic in order to do nonblocking
 // assigns to real registers
 reg [0:CELL_CNT-1] tempEnables;
-reg tempHit;
-reg [DATA_WIDTH-1:0] tempDataOut;
+
+always @ (*) begin
+    tempEnables = {CELL_CNT{1'b1}};
+    hit = 0;
+    data_out = {DATA_WIDTH{1'b0}};
+    for (j = 0; j < CELL_CNT; j = j + 1) begin
+        if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
+            data_out = reg_data[j][DATA_WIDTH-1:0];
+            hit = 1;
+            // Age all the data above this one
+            tempEnables = tempEnables << (CELL_CNT-j-1);
+        end
+    end
+end
 
 // We don't want to spend a cycle shifting in and out the same data at the
 // front of the shift register, so we keep track of the previous address
@@ -101,18 +113,6 @@ reg [ADDR_WIDTH-1:0] prevAddr;
 
 always @ (posedge clk) begin
     prevAddr <= addr;
-    tempEnables = {CELL_CNT{1'b1}};
-    tempHit = 0;
-    for (j = 0; j < CELL_CNT; j = j + 1) begin
-        if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
-            tempDataOut = reg_data[j][DATA_WIDTH-1:0];
-            tempHit = 1;
-            // Age all the data above this one
-            tempEnables = tempEnables << (CELL_CNT-j-1);
-        end
-    end
-    hit <= tempHit;
-    data_out <= tempDataOut;
 
     // Shift in the requested data to make it the least aged
     if (we) begin
@@ -122,8 +122,8 @@ always @ (posedge clk) begin
 
     // Shift in the requested data to make it the least aged, overwriting
     // its old position in the cache
-    else if (tempHit && addr != prevAddr) begin
-        d_shiftin <= {addr, tempDataOut};
+    else if (hit && addr != prevAddr) begin
+        d_shiftin <= {addr, data_out};
         enables <= tempEnables;
     end
 
