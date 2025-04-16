@@ -36,24 +36,23 @@ always @ (posedge clk) begin
     if (~rst & en) begin
         case (cycle)
             0: begin
-                addr <= (hibyte) ? pc : pc + 1;
-                cycle <= 1;
-                mem_req <= 1;
-            end
-            1: begin
                 if (cache_hit) begin
                     inst_out <= cache_inst;
                     cycle <= 2;
-                    mem_req <= 0;
+                end else begin
+                    addr <= (hibyte) ? pc : pc + 1;
+                    mem_req <= 1;
+                    cycle <= 1;
                 end
+            end
+            1: begin
                 if (mem_ready) begin
                     mem_req <= 0;
                     if (hibyte) begin
                         inst_out[15:8] <= data_in;
                         cycle <= 0;
                         hibyte <= 0;
-                    end
-                    else begin
+                    end else begin
                         inst_out[7:0] <= data_in;
                         cycle <= 2;
                     end
