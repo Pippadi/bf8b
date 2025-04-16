@@ -18,7 +18,7 @@ module writeback
 
 reg [7:0] reg_file [0:15];
 
-// Unpack the packed register file
+// Pack the unpacked register file
 integer i;
 always @ (*) begin
     for (i = 0; i < 16; i = i + 1) begin
@@ -36,14 +36,9 @@ function automatic needs_writeback (input [3:0] op);
 endfunction
 
 always @ (posedge clk) begin
-    if (en) begin
-        if (needs_writeback(op)) begin
-            reg_file[reg_addr] <= val;
-        end
-        ready <= 1;
-    end
-    else
-        ready <= 0;
+    if (en & needs_writeback(op))
+        reg_file[reg_addr] <= val;
+    ready <= en;
 end
 
 endmodule
