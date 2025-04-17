@@ -53,11 +53,21 @@ make 8bit.vcd
 make sim
 ```
 
-## Notes
+## Architectural Notes
 
 An 8-bit data bus is a huge bottleneck when fetching 16-bit instructions.
 Making the memory bus wider would be boring, so an LRU instruction cache has been implemented.
 Its default size is 8 instructions (each cell is 16 bits).
 On-the-fly modification of instructions is not supported, as the fetch stage does not check for consistency between cached instructions and memory.
 
-Basic branch prediction is a future goal.
+LRU behavior is implemented by building the cache around a modified shift register.
+Each level in the shift register holds an address and the corresponding data.
+Further, each level can be enabled or disabled individually, meaning that shifts can be selectively performed within the register.
+
+Data to be cached is shifted in.
+Writing data whose address is not present in the cache results in the oldest data getting shifted out.
+When there is a hit on data, the hit data is shifted into the top, and all the data above it, are shifted.
+In other words, the hit data is shifted to the top of the shift register, its old position being overwritten while all the older cells remain untouched.
+It is the position of the data within the shift register that determines age. There are no separate bits spent on tracking age.
+
+Basic branch prediction and a D cache are future goals.
