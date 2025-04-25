@@ -13,7 +13,7 @@ My first Verilog project. I have no idea what I'm doing.
 - Up to 16 two-byte instructions (8 implemented so far; nothing set in stone)
 - LRU Instruction cache
 
-Vivado says 549 LUTs and 583 FFs.
+Vivado says 368 LUTs and 454 FFs.
 
 ## Instruction set
 

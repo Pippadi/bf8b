@@ -30,6 +30,7 @@ reg [7:0] a, b;
 reg [7:0] pc;
 
 reg fetch_en;
+reg [7:0] fetch_pc;
 wire fetch_mem_ready;
 wire fetch_mem_req;
 wire fetch_ready;
@@ -44,7 +45,7 @@ fetch Fetch (
     .en(fetch_en),
     .clk(clk),
     .data_in(data_in),
-    .pc(pc),
+    .pc(fetch_pc),
     .mem_ready(fetch_mem_ready),
     .addr(fetch_addr),
     .inst_out(fetch_inst),
@@ -169,7 +170,7 @@ endfunction
 function automatic decode_should_start(input [1:0] fetch_state, decode_state);
     decode_should_start =
         fetch_state == STATE_COMPLETE &&
-        (decode_state == STATE_IDLE || decode_state == STATE_RESETTING);
+        (decode_state == STATE_IDLE);
 endfunction
 
 function automatic exec_should_start(input [1:0] decode_state, exec_state);
@@ -196,75 +197,62 @@ always @ (*) begin
     end
 end
 
-always @ (posedge clk) begin
+always @ (*) begin
     if (rst) begin
-        pc <= 0;
-        fetch_en <= 0;
-        decode_en <= 0;
-        exec_en <= 0;
-        wb_en <= 0;
-        start_decode <= 0;
-        start_exec <= 0;
-        start_wb <= 0;
+        pc = 0;
+        fetch_en = 0;
+        decode_en = 0;
+        exec_en = 0;
+        wb_en = 0;
+        start_decode = 0;
+        start_exec = 0;
+        start_wb = 0;
     end
 
     else begin
-        if (fetch_should_start(fetch_state))
-            fetch_en <= 1;
-
-        if (decode_should_start(fetch_state, decode_state)) begin
-            decode_inst <= fetch_inst;
-            start_decode <= 1;
-            fetch_en <= 0;
-            pc <= pc + 2;
+        if (fetch_state == STATE_IDLE) begin
+            fetch_pc = pc;
+            fetch_en = 1;
         end
 
-        if (start_decode) begin
-            decode_en <= 1;
-            start_decode <= 0;
+        if (decode_should_start(fetch_state, decode_state)) begin
+            decode_inst = fetch_inst;
+            fetch_en = 0;
+            pc = pc + 2;
+            decode_en = 1;
         end
 
         if (exec_should_start(decode_state, exec_state)) begin
-            exec_op <= decode_op;
-            exec_wb_addr <= decode_reg0;
-            exec_imm_in <= decode_imm;
-            start_exec <= 1;
-            decode_en <= 0;
+            exec_op = decode_op;
+            exec_wb_addr = decode_reg0;
+            exec_imm_in = decode_imm;
+            exec_en = 1;
+            decode_en = 0;
 
             if (decode_op == OP_STR || decode_op == OP_JMP || decode_op == OP_JEQZ) begin
-                exec_reg0_in <= reg_file[decode_reg0];
-                exec_reg1_in <= reg_file[decode_reg1];
+                exec_reg0_in = reg_file[decode_reg0];
+                exec_reg1_in = reg_file[decode_reg1];
             end else begin
-                exec_reg0_in <= reg_file[decode_reg1];
-                exec_reg1_in <= reg_file[decode_reg2];
+                exec_reg0_in = reg_file[decode_reg1];
+                exec_reg1_in = reg_file[decode_reg2];
             end
         end
 
-        if (start_exec) begin
-            exec_en <= 1;
-            start_exec <= 0;
-        end
-
         if (wb_should_start(exec_state, wb_state)) begin
-            wb_op <= exec_op;
-            wb_reg_addr <= exec_wb_addr;
-            wb_val <= exec_val_out;
-            exec_en <= 0;
+            wb_op = exec_op;
+            wb_reg_addr = exec_wb_addr;
+            wb_val = exec_val_out;
+            exec_en = 0;
             if (exec_flush_pipeline) begin
-                pc <= exec_pc_out;
-                fetch_en <= 0;
-                decode_en <= 0;
+                pc = exec_pc_out;
+                fetch_en = 0;
+                decode_en = 0;
             end else
-                start_wb <= 1;
-        end
-
-        if (start_wb) begin
-            wb_en <= 1;
-            start_wb <= 0;
+                wb_en = 1;
         end
 
         if (wb_state == STATE_COMPLETE) begin
-            wb_en <= 0;
+            wb_en = 0;
         end
     end
 end
