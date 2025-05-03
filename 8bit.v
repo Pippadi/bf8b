@@ -162,9 +162,7 @@ mem_if #(
 );
 
 function automatic fetch_should_start(input [1:0] fetch_state);
-    fetch_should_start =
-        fetch_state == STATE_IDLE ||
-        fetch_state == STATE_RESETTING;
+    fetch_should_start = fetch_state == STATE_IDLE;
 endfunction
 
 function automatic decode_should_start(input [1:0] fetch_state, decode_state);
@@ -210,7 +208,7 @@ always @ (*) begin
     end
 
     else begin
-        if (fetch_state == STATE_IDLE) begin
+        if (fetch_should_start(fetch_state)) begin
             fetch_pc = pc;
             fetch_en = 1;
         end
