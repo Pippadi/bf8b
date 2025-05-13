@@ -1,5 +1,6 @@
 module exec
 #(
+    parameter M_WIDTH = 8,
     parameter OP_JMP = 4'b0000,
     parameter OP_LOD = 4'b0001,
     parameter OP_STR = 4'b0010,

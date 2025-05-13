@@ -1,17 +1,18 @@
 module mem_if
 #(
+    parameter M_WIDTH = 8,
     parameter CLIENT_CNT = 2
 )
 (
     input rst,
     input clk,
     input [CLIENT_CNT-1:0] requests,
-    input [CLIENT_CNT * 8 - 1:0] addrs,
+    input [CLIENT_CNT*M_WIDTH-1:0] addrs,
     input [CLIENT_CNT-1:0] wes,
-    input [CLIENT_CNT*8-1:0] data_outs,
+    input [CLIENT_CNT*M_WIDTH-1:0] data_outs,
     output reg [CLIENT_CNT-1:0] readies,
-    output reg [7:0] data_out,
-    output reg [7:0] addr,
+    output reg [M_WIDTH-1:0] data_out,
+    output reg [M_WIDTH-1:0] addr,
     output reg we
 );
 

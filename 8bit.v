@@ -1,5 +1,6 @@
 module eightbit
 #(
+    parameter M_WIDTH = 8,
     parameter OP_JMP = 4'b0000,
     parameter OP_LOD = 4'b0001,
     parameter OP_STR = 4'b0010,
@@ -12,35 +13,40 @@ module eightbit
 (
     input rst,
     input clk,
-    input [7:0] data_in,
-    output [7:0] data_out,
-    output [7:0] addr,
+    input [M_WIDTH-1:0] data_in,
+    output [M_WIDTH-1:0] data_out,
+    output [M_WIDTH-1:0] addr,
     output we
 );
+
+localparam INST_WIDTH = 2*M_WIDTH;
 
 localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
 localparam STATE_RESETTING = 2'b01;
 
-reg [7:0] reg_file [15:0];
-wire [8*16-1:0] packed_reg_file;
+reg [M_WIDTH-1:0] reg_file [15:0];
+wire [M_WIDTH*16-1:0] packed_reg_file;
 
-reg [7:0] a, b;
-reg [7:0] pc;
+reg [M_WIDTH-1:0] a, b;
+reg [M_WIDTH-1:0] pc;
 
 reg fetch_en;
-reg [7:0] fetch_pc;
+reg [M_WIDTH-1:0] fetch_pc;
 wire fetch_mem_ready;
 wire fetch_mem_req;
 wire fetch_ready;
-wire [7:0] fetch_addr;
-wire [15:0] fetch_inst;
+wire [M_WIDTH-1:0] fetch_addr;
+wire [INST_WIDTH-1:0] fetch_inst;
 wire [1:0] fetch_state;
 
 assign fetch_state = {fetch_en, fetch_ready};
 
-fetch Fetch (
+fetch #(
+    .M_WIDTH(M_WIDTH),
+    .INST_WIDTH(INST_WIDTH)
+) Fetch (
     .rst(rst),
     .en(fetch_en),
     .clk(clk),
@@ -55,9 +61,9 @@ fetch Fetch (
 
 reg start_decode;
 reg decode_en;
-reg [15:0] decode_inst;
+reg [INST_WIDTH-1:0] decode_inst;
 wire decode_ready;
-wire [7:0] decode_imm;
+wire [M_WIDTH-1:0] decode_imm;
 wire [3:0] decode_op;
 wire [3:0] decode_reg0, decode_reg1, decode_reg2;
 wire [1:0] decode_state;
@@ -65,6 +71,8 @@ wire [1:0] decode_state;
 assign decode_state = {decode_en, decode_ready};
 
 decode #(
+    .M_WIDTH(M_WIDTH),
+    .INST_WIDTH(INST_WIDTH),
     .OP_JMP(OP_JMP),
     .OP_LODI(OP_LODI)
 ) Decode (
@@ -83,24 +91,25 @@ reg start_exec;
 reg exec_en;
 reg [3:0] exec_op;
 reg [3:0] exec_wb_addr;
-reg [7:0] exec_reg0_in;
-reg [7:0] exec_reg1_in;
-reg [7:0] exec_imm_in;
-wire [7:0] exec_data_out;
+reg [M_WIDTH-1:0] exec_reg0_in;
+reg [M_WIDTH-1:0] exec_reg1_in;
+reg [M_WIDTH-1:0] exec_imm_in;
+wire [M_WIDTH-1:0] exec_data_out;
 wire exec_ready;
 
-wire [7:0] exec_mem_addr;
+wire [M_WIDTH-1:0] exec_mem_addr;
 wire exec_mem_we, exec_mem_req;
 wire exec_mem_ready;
 
-wire [7:0] exec_pc_out;
+wire [M_WIDTH-1:0] exec_pc_out;
 wire exec_flush_pipeline;
-wire [7:0] exec_val_out;
+wire [M_WIDTH-1:0] exec_val_out;
 wire [1:0] exec_state;
 
 assign exec_state = {exec_en, exec_ready};
 
 exec #(
+    .M_WIDTH(M_WIDTH),
     .OP_LOD(OP_LOD),
     .OP_STR(OP_STR),
     .OP_ADD(OP_ADD)
@@ -126,7 +135,7 @@ exec #(
 reg start_wb;
 reg wb_en;
 reg [3:0] wb_op;
-reg [7:0] wb_val;
+reg [M_WIDTH-1:0] wb_val;
 reg [3:0] wb_reg_addr;
 wire wb_ready;
 wire [1:0] wb_state;
@@ -134,6 +143,7 @@ wire [1:0] wb_state;
 assign wb_state = {wb_en, wb_ready};
 
 writeback #(
+    .M_WIDTH(M_WIDTH),
     .OP_LOD(OP_LOD),
     .OP_ADD(OP_ADD)
 ) Writeback (
@@ -147,6 +157,7 @@ writeback #(
 );
 
 mem_if #(
+    .M_WIDTH(M_WIDTH),
     .CLIENT_CNT(2)
 ) MemoryInterface (
     .rst(rst),
@@ -154,7 +165,7 @@ mem_if #(
     .requests({exec_mem_req, fetch_mem_req}),
     .addrs({exec_mem_addr, fetch_addr}),
     .wes({exec_mem_we, 1'b0}),
-    .data_outs({exec_data_out, 8'b0}),
+    .data_outs({exec_data_out, {M_WIDTH{1'b0}}}),
     .readies({exec_mem_ready, fetch_mem_ready}),
     .data_out(data_out),
     .addr(addr),
@@ -191,7 +202,7 @@ endfunction
 integer i;
 always @ (*) begin
     for (i = 0; i < 16; i = i + 1) begin
-        reg_file[i] = packed_reg_file[8*i +: 8];
+        reg_file[i] = packed_reg_file[M_WIDTH*i +: M_WIDTH];
     end
 end
 

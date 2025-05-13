@@ -1,11 +1,16 @@
-module fetch(
+module fetch
+#(
+    M_WIDTH = 8,
+    INST_WIDTH = 16
+)
+(
     input rst,
     input en,
     input clk,
-    input [7:0] data_in,
-    input [7:0] pc,
+    input [M_WIDTH-1:0] data_in,
+    input [M_WIDTH-1:0] pc,
     input mem_ready,
-    output reg [7:0] addr,
+    output reg [M_WIDTH-1:0] addr,
     output reg [15:0] inst_out,
     output reg mem_req,
     output reg ready
@@ -13,11 +18,11 @@ module fetch(
 
 reg cache_we;
 wire cache_hit;
-wire [15:0] cache_inst;
+wire [INST_WIDTH-1:0] cache_inst;
 
 cache #(
-    .DATA_WIDTH(16),
-    .ADDR_WIDTH(8),
+    .DATA_WIDTH(INST_WIDTH),
+    .ADDR_WIDTH(M_WIDTH),
     .CELL_CNT(8)
 ) ICache (
     .rst(rst),
@@ -49,11 +54,11 @@ always @ (posedge clk) begin
                 if (mem_ready) begin
                     mem_req <= 0;
                     if (hibyte) begin
-                        inst_out[15:8] <= data_in;
+                        inst_out[M_WIDTH+:M_WIDTH] <= data_in;
                         cycle <= 0;
                         hibyte <= 0;
                     end else begin
-                        inst_out[7:0] <= data_in;
+                        inst_out[0+:M_WIDTH] <= data_in;
                         cycle <= 2;
                     end
                 end

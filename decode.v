@@ -1,17 +1,19 @@
 module decode
 #(
+    parameter M_WIDTH = 8,
+    parameter INST_WIDTH = 16,
     parameter OP_JMP = 4'b0000,
     parameter OP_LODI = 4'b0101
 )
 (
     input en,
     input clk,
-    input [15:0] inst,
+    input [INST_WIDTH-1:0] inst,
     output reg [3:0] op,
     output reg [3:0] reg0,
     output reg [3:0] reg1,
     output reg [3:0] reg2,
-    output reg [7:0] imm,
+    output reg [M_WIDTH-1:0] imm,
     output reg ready
 );
 
