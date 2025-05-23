@@ -20,7 +20,7 @@ module eightbit
     output we
 );
 
-localparam INST_WIDTH = 16;
+localparam INST_WIDTH = M_WIDTH;
 localparam REG_ADDR_WIDTH = $clog2(REG_CNT);
 
 localparam STATE_IDLE = 2'b00;
@@ -231,7 +231,7 @@ always @ (*) begin
         if (decode_should_start(fetch_state, decode_state)) begin
             decode_inst = fetch_inst;
             fetch_en = 0;
-            pc = pc + 2;
+            pc = pc + (INST_WIDTH / 8);
             decode_en = 1;
         end
 

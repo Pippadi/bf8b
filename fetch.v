@@ -35,7 +35,6 @@ cache #(
 );
 
 reg [1:0] cycle;
-reg hibyte;
 
 always @ (posedge clk) begin
     if (~rst & en) begin
@@ -45,7 +44,7 @@ always @ (posedge clk) begin
                     inst_out <= cache_inst;
                     cycle <= 2;
                 end else begin
-                    addr <= (hibyte) ? pc : pc + 1;
+                    addr <= pc;
                     mem_req <= 1;
                     cycle <= 1;
                 end
@@ -53,14 +52,8 @@ always @ (posedge clk) begin
             1: begin
                 if (mem_ready) begin
                     mem_req <= 0;
-                    if (hibyte) begin
-                        inst_out[M_WIDTH+:M_WIDTH] <= data_in;
-                        cycle <= 0;
-                        hibyte <= 0;
-                    end else begin
-                        inst_out[0+:M_WIDTH] <= data_in;
-                        cycle <= 2;
-                    end
+                    inst_out <= data_in;
+                    cycle <= 2;
                 end
             end
             2: begin
@@ -77,7 +70,6 @@ always @ (posedge clk) begin
         mem_req <= 0;
         cache_we <= 0;
         cycle <= 0;
-        hibyte <= 1;
     end
 end
 
