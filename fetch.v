@@ -11,7 +11,7 @@ module fetch
     input [M_WIDTH-1:0] pc,
     input mem_ready,
     output reg [M_WIDTH-1:0] addr,
-    output reg [15:0] inst_out,
+    output reg [INST_WIDTH-1:0] inst_out,
     output reg mem_req,
     output reg ready
 );

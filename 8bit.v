@@ -1,6 +1,7 @@
 module eightbit
 #(
     parameter M_WIDTH = 8,
+    parameter REG_CNT = 16,
     parameter OP_JMP = 4'b0000,
     parameter OP_LOD = 4'b0001,
     parameter OP_STR = 4'b0010,
@@ -19,15 +20,16 @@ module eightbit
     output we
 );
 
-localparam INST_WIDTH = 2*M_WIDTH;
+localparam INST_WIDTH = 16;
+localparam REG_ADDR_WIDTH = $clog2(REG_CNT);
 
 localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
 localparam STATE_RESETTING = 2'b01;
 
-reg [M_WIDTH-1:0] reg_file [15:0];
-wire [M_WIDTH*16-1:0] packed_reg_file;
+reg [M_WIDTH-1:0] reg_file [REG_CNT-1:0];
+wire [M_WIDTH*REG_CNT-1:0] packed_reg_file;
 
 reg [M_WIDTH-1:0] a, b;
 reg [M_WIDTH-1:0] pc;
@@ -65,7 +67,7 @@ reg [INST_WIDTH-1:0] decode_inst;
 wire decode_ready;
 wire [M_WIDTH-1:0] decode_imm;
 wire [3:0] decode_op;
-wire [3:0] decode_reg0, decode_reg1, decode_reg2;
+wire [REG_ADDR_WIDTH-1:0] decode_reg0, decode_reg1, decode_reg2;
 wire [1:0] decode_state;
 
 assign decode_state = {decode_en, decode_ready};
@@ -90,7 +92,7 @@ decode #(
 reg start_exec;
 reg exec_en;
 reg [3:0] exec_op;
-reg [3:0] exec_wb_addr;
+reg [REG_ADDR_WIDTH-1:0] exec_wb_addr;
 reg [M_WIDTH-1:0] exec_reg0_in;
 reg [M_WIDTH-1:0] exec_reg1_in;
 reg [M_WIDTH-1:0] exec_imm_in;
@@ -136,7 +138,7 @@ reg start_wb;
 reg wb_en;
 reg [3:0] wb_op;
 reg [M_WIDTH-1:0] wb_val;
-reg [3:0] wb_reg_addr;
+reg [REG_ADDR_WIDTH-1:0] wb_reg_addr;
 wire wb_ready;
 wire [1:0] wb_state;
 
@@ -144,6 +146,8 @@ assign wb_state = {wb_en, wb_ready};
 
 writeback #(
     .M_WIDTH(M_WIDTH),
+    .REG_CNT(REG_CNT),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
     .OP_LOD(OP_LOD),
     .OP_ADD(OP_ADD)
 ) Writeback (
@@ -201,7 +205,7 @@ endfunction
 // Pack the register file to satisfy more strict Verilog rules
 integer i;
 always @ (*) begin
-    for (i = 0; i < 16; i = i + 1) begin
+    for (i = 0; i < REG_CNT; i = i + 1) begin
         reg_file[i] = packed_reg_file[M_WIDTH*i +: M_WIDTH];
     end
 end
