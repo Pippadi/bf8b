@@ -5,13 +5,15 @@ module eightbit_tb();
 reg rst;
 reg clk;
 
-reg [7:0] mem [0:255];
-reg [7:0] data_out;
-wire [7:0] addr;
-wire [7:0] data_in;
+reg [7:0] mem [0:4095];
+reg [31:0] data_out;
+wire [31:0] addr;
+wire [31:0] data_in;
 wire we;
 
-eightbit eb(
+eightbit #(
+    .M_WIDTH(32)
+) eb (
     .rst(rst),
     .clk(clk),
     .addr(addr),
@@ -93,8 +95,8 @@ end
 
 always @(posedge clk) begin
     if (we)
-        mem[addr] <= data_in;
-    data_out <= mem[addr];
+        {mem[addr], mem[addr+1], mem[addr+2], mem[addr+3]} <= data_in;
+    data_out <= {mem[addr], mem[addr+1], mem[addr+2], mem[addr+3]};
 end
 
 endmodule
