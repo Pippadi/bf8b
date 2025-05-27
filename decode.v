@@ -42,7 +42,7 @@ always @ (*) begin
     immu = {inst[31:12], 12'b0};
     immj = {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
 
-    case (opcode)
+    case (op)
         OP_LUI, OP_AIUPC:
             imm = immu;
         OP_JAL:

@@ -64,6 +64,7 @@ fetch #(
 reg start_decode;
 reg decode_en;
 reg [INST_WIDTH-1:0] decode_inst;
+reg [M_WIDTH-1:0] decode_pc;
 wire decode_ready;
 wire [6:0] decode_op;
 wire [REG_ADDR_WIDTH-1:0] decode_rd, decode_rs1, decode_rs2;
@@ -91,9 +92,9 @@ decode #(
     .clk(clk),
     .inst(decode_inst),
     .op(decode_op),
-    .rd(decode_reg0),
-    .rs1(decode_reg1),
-    .rs2(decode_reg2),
+    .rd(decode_rd),
+    .rs1(decode_rs1),
+    .rs2(decode_rs2),
     .imm(decode_imm),
     .funct7(decode_funct7),
     .funct3(decode_funct3),
@@ -104,6 +105,7 @@ reg start_exec;
 reg exec_en;
 reg [3:0] exec_op;
 reg [REG_ADDR_WIDTH-1:0] exec_wb_addr;
+reg [M_WIDTH-1:0] exec_pc_in;
 reg [M_WIDTH-1:0] exec_rs1_in;
 reg [M_WIDTH-1:0] exec_rs2_in;
 reg [M_WIDTH-1:0] exec_imm_in;
@@ -134,6 +136,7 @@ exec #(
 ) Execute (
     .en(exec_en),
     .clk(clk),
+    .pc_in(exec_pc_in),
     .op(exec_op),
     .rs1(exec_rs1_in),
     .rs2(exec_rs2_in),
@@ -164,8 +167,14 @@ writeback #(
     .M_WIDTH(M_WIDTH),
     .REG_CNT(REG_CNT),
     .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
-    .OP_LOD(OP_LOD),
-    .OP_ADD(OP_ADD)
+    .OP_LUI(OP_LUI),
+    .OP_AIUPC(OP_AIUPC),
+    .OP_JAL(OP_JAL),
+    .OP_JALR(OP_JALR),
+    .OP_LOAD(OP_LOAD),
+    .OP_BRANCH(OP_BRANCH),
+    .OP_INTEGER_IMM(OP_INTEGER_IMM),
+    .OP_INTEGER(OP_INTEGER)
 ) Writeback (
     .en(wb_en),
     .clk(clk),
@@ -245,6 +254,7 @@ always @ (*) begin
         end
 
         if (decode_should_start(fetch_state, decode_state)) begin
+            decode_pc = fetch_pc;
             decode_inst = fetch_inst;
             fetch_en = 0;
             pc = pc + (INST_WIDTH / 8);
@@ -253,6 +263,7 @@ always @ (*) begin
 
         if (exec_should_start(decode_state, exec_state)) begin
             exec_op = decode_op;
+            exec_pc_in = decode_pc;
             exec_wb_addr = decode_rd;
             exec_rs1_in = reg_file[decode_rs1];
             exec_rs2_in = reg_file[decode_rs2];

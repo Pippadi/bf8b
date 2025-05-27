@@ -34,6 +34,11 @@ module exec
 
 reg [1:0] cycle;
 
+wire [M_WIDTH-1:0] imm_pl_rs1, next_pc;
+
+assign imm_pl_rs1 = imm + rs1;
+assign next_pc = pc_in + 4;
+
 always @ (posedge clk) begin
     if (en) begin
         case (cycle)
@@ -43,12 +48,12 @@ always @ (posedge clk) begin
                     OP_AIUPC: val_out <= pc_in + imm;
                     OP_JAL: begin
                         pc_out <= pc_in + imm;
-                        val_out <= pc_in + 4;
+                        val_out <= next_pc;
                         flush_pipeline <= 1;
                     end
                     OP_JALR: begin
-                        pc_out <= {(imm + rs1)[M_WIDTH-1:1], 1'b0};
-                        val_out <= pc_in + 4;
+                        pc_out <= {imm_pl_rs1[M_WIDTH-1:1], 1'b0};
+                        val_out <= next_pc;
                         flush_pipeline <= 1;
                     end
                 endcase

@@ -3,11 +3,14 @@ module writeback
     parameter M_WIDTH = 8,
     parameter REG_CNT = 16,
     parameter REG_ADDR_WIDTH = 4,
-    parameter OP_LOD = 4'b0001,
-    parameter OP_ADD = 4'b0011,
-    parameter OP_ADDI = 4'b0100,
-    parameter OP_LODI = 4'b0101,
-    parameter OP_NAND = 4'b0110
+    parameter OP_LUI = 7'b0110111,
+    parameter OP_AIUPC = 7'b0010111,
+    parameter OP_JAL = 7'b1101111,
+    parameter OP_JALR = 7'b1100111,
+    parameter OP_LOAD = 7'b0000011,
+    parameter OP_BRANCH = 7'b1100011,
+    parameter OP_INTEGER_IMM = 7'b0010011,
+    parameter OP_INTEGER = 7'b0110011
 )
 (
     input en,
@@ -31,17 +34,20 @@ end
 
 function automatic needs_writeback (input [3:0] op);
     needs_writeback =
-        (op == OP_LOD) ||
-        (op == OP_ADD) ||
-        (op == OP_ADDI) ||
-        (op == OP_LODI) ||
-        (op == OP_NAND);
+        (op == OP_LUI) ||
+        (op == OP_AIUPC) ||
+        (op == OP_JAL) ||
+        (op == OP_JALR) ||
+        (op == OP_INTEGER_IMM) ||
+        (op == OP_INTEGER) ||
+        (op == OP_LOAD);
 endfunction
 
 always @ (posedge clk) begin
-    if (en & needs_writeback(op))
+    if (en && needs_writeback(op) && reg_addr != 0)
         reg_file[reg_addr] <= val;
     ready <= en;
+    reg_file[0] = 0;
 end
 
 endmodule
