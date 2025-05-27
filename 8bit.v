@@ -7,7 +7,9 @@ module eightbit
     parameter OP_JAL = 7'b1101111,
     parameter OP_JALR = 7'b1100111,
     parameter OP_LOAD = 7'b0000011,
-    parameter OP_BRANCH = 7'b1100011
+    parameter OP_BRANCH = 7'b1100011,
+    parameter OP_INTEGER_IMM = 7'b0010011,
+    parameter OP_INTEGER = 7'b0110011
 )
 (
     input rst,
@@ -81,7 +83,9 @@ decode #(
     .OP_JAL(OP_JAL),
     .OP_JALR(OP_JALR),
     .OP_LOAD(OP_LOAD),
-    .OP_BRANCH(OP_BRANCH)
+    .OP_BRANCH(OP_BRANCH),
+    .OP_INTEGER_IMM(OP_INTEGER_IMM),
+    .OP_INTEGER(OP_INTEGER)
 ) Decode (
     .en(decode_en),
     .clk(clk),
@@ -124,7 +128,9 @@ exec #(
     .OP_JAL(OP_JAL),
     .OP_JALR(OP_JALR),
     .OP_LOAD(OP_LOAD),
-    .OP_BRANCH(OP_BRANCH)
+    .OP_BRANCH(OP_BRANCH),
+    .OP_INTEGER_IMM(OP_INTEGER_IMM),
+    .OP_INTEGER(OP_INTEGER)
 ) Execute (
     .en(exec_en),
     .clk(clk),

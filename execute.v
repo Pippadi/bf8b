@@ -1,21 +1,24 @@
 module exec
 #(
     parameter M_WIDTH = 8,
-    parameter OP_JMP = 4'b0000,
-    parameter OP_LOD = 4'b0001,
-    parameter OP_STR = 4'b0010,
-    parameter OP_ADD = 4'b0011,
-    parameter OP_ADDI = 4'b0100,
-    parameter OP_LODI = 4'b0101,
-    parameter OP_NAND = 4'b0110,
-    parameter OP_JEQZ = 4'b0111
+    parameter OP_LUI = 7'b0110111,
+    parameter OP_AIUPC = 7'b0010111,
+    parameter OP_JAL = 7'b1101111,
+    parameter OP_JALR = 7'b1100111,
+    parameter OP_LOAD = 7'b0000011,
+    parameter OP_BRANCH = 7'b1100011,
+    parameter OP_INTEGER_IMM = 7'b0010011,
+    parameter OP_INTEGER = 7'b0110011
 )
 (
     input en,
     input clk,
     input [3:0] op,
-    input [M_WIDTH-1:0] reg0,
-    input [M_WIDTH-1:0] reg1,
+    input [6:0] funct7,
+    input [2:0] funct3,
+    input [M_WIDTH-1:0] pc_in,
+    input [M_WIDTH-1:0] rs1,
+    input [M_WIDTH-1:0] rs2,
     input [M_WIDTH-1:0] imm,
     input [M_WIDTH-1:0] mem_data_in,
     input mem_ready,
@@ -33,39 +36,27 @@ reg [1:0] cycle;
 
 always @ (posedge clk) begin
     if (en) begin
-        if (op == OP_LOD || op == OP_STR) begin
-            ready <= cycle == 2;
-
-            if (cycle == 0) begin
-                mem_addr <= reg1 + imm;
-                mem_we <= op == OP_STR;
-                mem_data_out <= reg0;
-                mem_req <= 1;
-                cycle <= 1;
-            end
-
-            if (cycle == 1 && mem_ready) begin
+        case (cycle)
+            0: begin
+                case (op)
+                    OP_LUI: val_out <= imm;
+                    OP_AIUPC: val_out <= pc_in + imm;
+                    OP_JAL: begin
+                        pc_out <= pc_in + imm;
+                        val_out <= pc_in + 4;
+                        flush_pipeline <= 1;
+                    end
+                    OP_JALR: begin
+                        pc_out <= {(imm + rs1)[M_WIDTH-1:1], 1'b0};
+                        val_out <= pc_in + 4;
+                        flush_pipeline <= 1;
+                    end
+                endcase
                 cycle <= 2;
-                mem_req <= 0;
-                val_out <= mem_data_in;
             end
-        end else begin
-            ready <= cycle;
 
-            if (cycle == 0) begin
-                if (op == OP_ADD || op == OP_ADDI)
-                    val_out <= reg0 + (op == OP_ADDI ? imm : reg1);
-                if (op == OP_LODI)
-                    val_out <= imm;
-                if (op == OP_NAND)
-                    val_out <= ~(reg0 & reg1);
-                if (op == OP_JMP || (op == OP_JEQZ && reg1 == 0)) begin
-                    pc_out <= imm + reg0;
-                    flush_pipeline <= 1;
-                end
-                cycle <= 1;
-            end
-        end
+            2: ready <= 1;
+        endcase
     end else begin
         ready <= 0;
         cycle <= 0;
