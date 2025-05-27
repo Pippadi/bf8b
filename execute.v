@@ -76,15 +76,30 @@ always @ (posedge clk) begin
                         val_out <= next_pc;
                         flush_pipeline <= 1;
                     end
-                    OP_INTEGER_IMM: case (funct3)
-                    0: val_out <= imm_pl_rs1;
-                    1: val_out <= rs1 << imm[4:0];
-                    2: val_out <= rs1 < imm;
-                    3: val_out <= {1'b0, rs1} < {1'b0, imm};
-                    4: val_out <= rs1 ^ imm;
-                    5: val_out <= imm[30] ? rs1 >>> imm[4:0] : rs1 >> imm[4:0];
-                    6: val_out <= rs1 | imm;
-                    7: val_out <= rs1 & imm;
+                    OP_INTEGER_IMM: begin
+                        case (funct3)
+                            0: val_out <= imm_pl_rs1;
+                            1: val_out <= rs1 << imm[4:0];
+                            2: val_out <= rs1 < imm;
+                            3: val_out <= {1'b0, rs1} < {1'b0, imm};
+                            4: val_out <= rs1 ^ imm;
+                            5: val_out <= imm[30] ? rs1 >>> imm[4:0] : rs1 >> imm[4:0];
+                            6: val_out <= rs1 | imm;
+                            7: val_out <= rs1 & imm;
+                        endcase
+                    end
+                    OP_INTEGER: begin
+                        case (funct3)
+                            0: val_out <= rs1 + rs2;
+                            1: val_out <= rs1 << rs2;
+                            2: val_out <= rs1 < rs2;
+                            3: val_out <= {1'b0, rs1} < {1'b0, rs2};
+                            4: val_out <= rs1 ^ rs2;
+                            5: val_out <= funct7[5] ? rs1 >>> rs2 : rs1 >> rs2;
+                            6: val_out <= rs1 | rs2;
+                            7: val_out <= rs1 & rs2;
+                        endcase
+                    end
                 endcase
                 cycle <= 1;
             end
