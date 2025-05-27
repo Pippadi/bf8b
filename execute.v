@@ -6,6 +6,7 @@ module exec
     parameter OP_JAL = 7'b1101111,
     parameter OP_JALR = 7'b1100111,
     parameter OP_LOAD = 7'b0000011,
+    parameter OP_STORE = 7'b0100011,
     parameter OP_BRANCH = 7'b1100011,
     parameter OP_INTEGER_IMM = 7'b0010011,
     parameter OP_INTEGER = 7'b0110011
@@ -41,9 +42,28 @@ assign next_pc = pc_in + 4;
 
 always @ (posedge clk) begin
     if (en) begin
-        case (cycle)
-            0: begin
-                case (op)
+        if (op == OP_LOAD || op == OP_STORE) begin
+            ready <= cycle == 2;
+
+            if (cycle == 0) begin
+                mem_addr <= imm_pl_rs1;
+                mem_we <= op == OP_STORE;
+                mem_data_out <= rs2;
+                mem_req <= 1;
+                cycle <= 1;
+            end
+
+            if (cycle == 1 && mem_ready) begin
+                cycle <= 2;
+                mem_req <= 0;
+                val_out <= mem_data_in;
+            end
+        end
+
+        else begin
+            ready <= cycle;
+            if (cycle == 0) begin
+                casez (op)
                     OP_LUI: val_out <= imm;
                     OP_AIUPC: val_out <= pc_in + imm;
                     OP_JAL: begin
@@ -56,12 +76,19 @@ always @ (posedge clk) begin
                         val_out <= next_pc;
                         flush_pipeline <= 1;
                     end
+                    OP_INTEGER_IMM: case (funct3)
+                    0: val_out <= imm_pl_rs1;
+                    1: val_out <= rs1 << imm[4:0];
+                    2: val_out <= rs1 < imm;
+                    3: val_out <= {1'b0, rs1} < {1'b0, imm};
+                    4: val_out <= rs1 ^ imm;
+                    5: val_out <= imm[30] ? rs1 >>> imm[4:0] : rs1 >> imm[4:0];
+                    6: val_out <= rs1 | imm;
+                    7: val_out <= rs1 & imm;
                 endcase
-                cycle <= 2;
+                cycle <= 1;
             end
-
-            2: ready <= 1;
-        endcase
+        end
     end else begin
         ready <= 0;
         cycle <= 0;
