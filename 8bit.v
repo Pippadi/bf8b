@@ -2,14 +2,12 @@ module eightbit
 #(
     parameter M_WIDTH = 8,
     parameter REG_CNT = 16,
-    parameter OP_JMP = 4'b0000,
-    parameter OP_LOD = 4'b0001,
-    parameter OP_STR = 4'b0010,
-    parameter OP_ADD = 4'b0011,
-    parameter OP_ADDI = 4'b0100,
-    parameter OP_LODI = 4'b0101,
-    parameter OP_NAND = 4'b0110,
-    parameter OP_JEQZ = 4'b0111
+    parameter OP_LUI = 7'b0110111,
+    parameter OP_AIUPC = 7'b0010111,
+    parameter OP_JAL = 7'b1101111,
+    parameter OP_JALR = 7'b1100111,
+    parameter OP_LOAD = 7'b0000011,
+    parameter OP_BRANCH = 7'b1100011
 )
 (
     input rst,
@@ -65,27 +63,36 @@ reg start_decode;
 reg decode_en;
 reg [INST_WIDTH-1:0] decode_inst;
 wire decode_ready;
+wire [6:0] decode_op;
+wire [REG_ADDR_WIDTH-1:0] decode_rd, decode_rs1, decode_rs2;
 wire [M_WIDTH-1:0] decode_imm;
-wire [3:0] decode_op;
-wire [REG_ADDR_WIDTH-1:0] decode_reg0, decode_reg1, decode_reg2;
+wire [6:0] decode_funct7;
+wire [2:0] decode_funct3;
 wire [1:0] decode_state;
 
 assign decode_state = {decode_en, decode_ready};
 
 decode #(
     .M_WIDTH(M_WIDTH),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
     .INST_WIDTH(INST_WIDTH),
-    .OP_JMP(OP_JMP),
-    .OP_LODI(OP_LODI)
+    .OP_LUI(OP_LUI),
+    .OP_AIUPC(OP_AIUPC),
+    .OP_JAL(OP_JAL),
+    .OP_JALR(OP_JALR),
+    .OP_LOAD(OP_LOAD),
+    .OP_BRANCH(OP_BRANCH)
 ) Decode (
     .en(decode_en),
     .clk(clk),
     .inst(decode_inst),
     .op(decode_op),
+    .rd(decode_reg0),
+    .rs1(decode_reg1),
+    .rs2(decode_reg2),
     .imm(decode_imm),
-    .reg0(decode_reg0),
-    .reg1(decode_reg1),
-    .reg2(decode_reg2),
+    .funct7(decode_funct7),
+    .funct3(decode_funct3),
     .ready(decode_ready)
 );
 
@@ -93,8 +100,8 @@ reg start_exec;
 reg exec_en;
 reg [3:0] exec_op;
 reg [REG_ADDR_WIDTH-1:0] exec_wb_addr;
-reg [M_WIDTH-1:0] exec_reg0_in;
-reg [M_WIDTH-1:0] exec_reg1_in;
+reg [M_WIDTH-1:0] exec_rs1_in;
+reg [M_WIDTH-1:0] exec_rs2_in;
 reg [M_WIDTH-1:0] exec_imm_in;
 wire [M_WIDTH-1:0] exec_data_out;
 wire exec_ready;
@@ -112,15 +119,18 @@ assign exec_state = {exec_en, exec_ready};
 
 exec #(
     .M_WIDTH(M_WIDTH),
-    .OP_LOD(OP_LOD),
-    .OP_STR(OP_STR),
-    .OP_ADD(OP_ADD)
+    .OP_LUI(OP_LUI),
+    .OP_AIUPC(OP_AIUPC),
+    .OP_JAL(OP_JAL),
+    .OP_JALR(OP_JALR),
+    .OP_LOAD(OP_LOAD),
+    .OP_BRANCH(OP_BRANCH)
 ) Execute (
     .en(exec_en),
     .clk(clk),
     .op(exec_op),
-    .reg0(exec_reg0_in),
-    .reg1(exec_reg1_in),
+    .rs1(exec_rs1_in),
+    .rs2(exec_rs2_in),
     .imm(exec_imm_in),
     .mem_ready(exec_mem_ready),
     .mem_data_in(data_in),
@@ -237,18 +247,12 @@ always @ (*) begin
 
         if (exec_should_start(decode_state, exec_state)) begin
             exec_op = decode_op;
-            exec_wb_addr = decode_reg0;
+            exec_wb_addr = decode_rd;
+            exec_rs1_in = reg_file[decode_rs1];
+            exec_rs2_in = reg_file[decode_rs2];
             exec_imm_in = decode_imm;
             exec_en = 1;
             decode_en = 0;
-
-            if (decode_op == OP_STR || decode_op == OP_JMP || decode_op == OP_JEQZ) begin
-                exec_reg0_in = reg_file[decode_reg0];
-                exec_reg1_in = reg_file[decode_reg1];
-            end else begin
-                exec_reg0_in = reg_file[decode_reg1];
-                exec_reg1_in = reg_file[decode_reg2];
-            end
         end
 
         if (wb_should_start(exec_state, wb_state)) begin
