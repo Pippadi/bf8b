@@ -12,7 +12,8 @@ wire [31:0] data_in;
 wire we;
 
 eightbit #(
-    .M_WIDTH(32)
+    .M_WIDTH(32),
+    .REG_CNT(32)
 ) eb (
     .rst(rst),
     .clk(clk),
@@ -33,10 +34,10 @@ initial begin
     $readmemh("fibonacci.hex", mem);
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
-    $dumpvars(0, mem[8'hE0]);
-    $dumpvars(0, eb.Writeback.reg_file[0]);
-    $dumpvars(0, eb.Writeback.reg_file[1]);
-    $dumpvars(0, eb.Writeback.reg_file[2]);
+    $dumpvars(0, mem[8'hE3]); // Smallest byte of word written to 0xE0
+    $dumpvars(0, eb.Writeback.reg_file[10]); // a0
+    $dumpvars(0, eb.Writeback.reg_file[11]); // a1
+    $dumpvars(0, eb.Writeback.reg_file[12]); // a2
 
     for (i = 0; i < 8; i = i + 1) begin
         $dumpvars(0, eb.Fetch.ICache.ShiftReg.q[i]);
@@ -59,8 +60,8 @@ end
 
 always @(posedge clk) begin
     if (we)
-        {mem[addr], mem[addr+1], mem[addr+2], mem[addr+3]} <= data_in;
-    data_out <= {mem[addr], mem[addr+1], mem[addr+2], mem[addr+3]};
+        {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]} <= data_in;
+    data_out <= {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
 end
 
 endmodule
