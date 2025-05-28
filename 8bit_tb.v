@@ -34,7 +34,10 @@ initial begin
     $readmemh("fibonacci.hex", mem);
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
-    $dumpvars(0, mem[8'hE3]); // Smallest byte of word written to 0xE0
+    $dumpvars(0, mem[8'hE3]);
+    $dumpvars(0, mem[8'hE2]);
+    $dumpvars(0, mem[8'hE1]);
+    $dumpvars(0, mem[8'hE0]);
     $dumpvars(0, eb.Writeback.reg_file[10]); // a0
     $dumpvars(0, eb.Writeback.reg_file[11]); // a1
     $dumpvars(0, eb.Writeback.reg_file[12]); // a2
@@ -59,8 +62,10 @@ initial begin
 end
 
 always @(posedge clk) begin
-    if (we)
+    if (we) begin
+        $display(data_in);
         {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]} <= data_in;
+    end
     data_out <= {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
 end
 

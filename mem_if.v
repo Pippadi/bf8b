@@ -39,9 +39,9 @@ always @ (posedge clk) begin
         case (mem_cycle)
             0: if (requests) begin
                 mem_mux_holder <= mem_mux_holder_temp;
-                addr <= addrs[mem_mux_holder_temp*8 +: 8];
+                addr <= addrs[mem_mux_holder_temp*M_WIDTH +: M_WIDTH];
                 we <= wes[mem_mux_holder_temp];
-                data_out <= data_outs[mem_mux_holder_temp*8 +: 8];
+                data_out <= data_outs[mem_mux_holder_temp*M_WIDTH +: M_WIDTH];
                 mem_cycle <= 1;
             end else begin
                 mem_mux_holder <= 0;
@@ -49,7 +49,7 @@ always @ (posedge clk) begin
             end
 
             1: begin
-                readies[mem_mux_holder] <= 1;
+                readies[mem_mux_holder] <= 1'b1;
                 we <= 0;
                 mem_cycle <= 2;
             end
