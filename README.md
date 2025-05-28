@@ -37,7 +37,17 @@ Vivado says 368 LUTs and 454 FFs.
 
 ## Programming
 
-Edit [the testbench](/8bit_tb.v). That's right.
+I use GCC.
+This is modified from the process I used to compile for the Red-V Thing Plus board, which was itself copied from [here](https://www.youtube.com/watch?v=n8g_XKSSqRo).
+I'm not sure I need all the compilation options, but this worked, so I've left them there for now.
+
+```sh
+riscv64-elf-gcc -march=rv32i -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -T./bf8b.ld fibonacci.s -o fibonacci
+riscv64-elf-objcopy -O binary --gap-fill 0x00 --pad-to 0x1000 fibonacci fibonacci.bin
+xxd -g 1 -c 1 -plain fibonacci.bin > fibonacci.hex
+```
+
+Edit [the testbench](/8bit_tb.v) so that the `$readmemh` directive reads the correct hex file.
 
 Execution begins at address `0x00`.
 Ensure that you specify an adequate number of clock pulses in the simulation for your program.
