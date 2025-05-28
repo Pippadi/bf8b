@@ -1,6 +1,7 @@
 module decode
 #(
     parameter M_WIDTH = 8,
+    parameter OP_WIDTH = 7,
     parameter REG_ADDR_WIDTH = 4,
     parameter INST_WIDTH = 16,
     parameter OP_LUI = 7'b0110111,
@@ -17,7 +18,7 @@ module decode
     input en,
     input clk,
     input [INST_WIDTH-1:0] inst,
-    output reg [6:0] op,
+    output reg [OP_WIDTH-1:0] op,
     output reg [REG_ADDR_WIDTH-1:0] rd,
     output reg [REG_ADDR_WIDTH-1:0] rs1,
     output reg [REG_ADDR_WIDTH-1:0] rs2,

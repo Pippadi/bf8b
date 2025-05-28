@@ -36,6 +36,7 @@ endmodule
 module exec
 #(
     parameter M_WIDTH = 8,
+    parameter OP_WIDTH = 7,
     parameter OP_LUI = 7'b0110111,
     parameter OP_AIUPC = 7'b0010111,
     parameter OP_JAL = 7'b1101111,
@@ -57,7 +58,7 @@ module exec
 (
     input en,
     input clk,
-    input [3:0] op,
+    input [OP_WIDTH-1:0] op,
     input [6:0] funct7,
     input [2:0] funct3,
     input [M_WIDTH-1:0] pc_in,
@@ -135,24 +136,20 @@ always @ (*) begin
                 OP_LUI: begin
                     alu_in1 = imm;
                     alu_in2 = 0;
-                    alu_funct3 = F3_ADD;
                 end
                 OP_AIUPC: begin
                     alu_in1 = imm;
                     alu_in2 = pc_in;
-                    alu_funct3 = F3_ADD;
                 end
                 OP_JAL: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
-                    alu_funct3 = F3_ADD;
                     pc_out = pc_in + imm;
                     flush_pipeline = 1;
                 end
                 OP_JALR: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
-                    alu_funct3 = F3_ADD;
                     pc_out = {imm_pl_rs1[M_WIDTH-1:1], 1'b0};
                     flush_pipeline = 1;
                 end

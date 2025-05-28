@@ -23,6 +23,7 @@ module eightbit
 
 localparam INST_WIDTH = M_WIDTH;
 localparam REG_ADDR_WIDTH = $clog2(REG_CNT);
+localparam OP_WIDTH = 7;
 
 localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
@@ -67,7 +68,7 @@ reg decode_en;
 reg [INST_WIDTH-1:0] decode_inst;
 reg [M_WIDTH-1:0] decode_pc;
 wire decode_ready;
-wire [6:0] decode_op;
+wire [OP_WIDTH-1:0] decode_op;
 wire [REG_ADDR_WIDTH-1:0] decode_rd, decode_rs1, decode_rs2;
 wire [M_WIDTH-1:0] decode_imm;
 wire [6:0] decode_funct7;
@@ -78,6 +79,7 @@ assign decode_state = {decode_en, decode_ready};
 
 decode #(
     .M_WIDTH(M_WIDTH),
+    .OP_WIDTH(OP_WIDTH),
     .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
     .INST_WIDTH(INST_WIDTH),
     .OP_LUI(OP_LUI),
@@ -105,12 +107,14 @@ decode #(
 
 reg start_exec;
 reg exec_en;
-reg [3:0] exec_op;
+reg [OP_WIDTH-1:0] exec_op;
 reg [REG_ADDR_WIDTH-1:0] exec_wb_addr;
 reg [M_WIDTH-1:0] exec_pc_in;
 reg [M_WIDTH-1:0] exec_rs1_in;
 reg [M_WIDTH-1:0] exec_rs2_in;
 reg [M_WIDTH-1:0] exec_imm_in;
+reg [2:0] exec_funct3;
+reg [6:0] exec_funct7;
 wire [M_WIDTH-1:0] exec_data_out;
 wire exec_ready;
 
@@ -127,6 +131,7 @@ assign exec_state = {exec_en, exec_ready};
 
 exec #(
     .M_WIDTH(M_WIDTH),
+    .OP_WIDTH(OP_WIDTH),
     .OP_LUI(OP_LUI),
     .OP_AIUPC(OP_AIUPC),
     .OP_JAL(OP_JAL),
@@ -144,6 +149,8 @@ exec #(
     .rs1(exec_rs1_in),
     .rs2(exec_rs2_in),
     .imm(exec_imm_in),
+    .funct3(exec_funct3),
+    .funct7(exec_funct7),
     .mem_ready(exec_mem_ready),
     .mem_data_in(data_in),
     .val_out(exec_val_out),
@@ -271,6 +278,8 @@ always @ (*) begin
             exec_rs1_in = reg_file[decode_rs1];
             exec_rs2_in = reg_file[decode_rs2];
             exec_imm_in = decode_imm;
+            exec_funct3 = decode_funct3;
+            exec_funct7 = decode_funct7;
             exec_en = 1;
             decode_en = 0;
         end
