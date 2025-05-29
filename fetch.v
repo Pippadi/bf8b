@@ -36,40 +36,42 @@ cache #(
 
 reg [1:0] cycle;
 
-always @ (posedge clk) begin
+always @ (*) begin
+    mem_req = 0;
+    cache_we = 0;
+    addr = pc;
+
     if (~rst & en) begin
         case (cycle)
             0: begin
-                if (cache_hit) begin
-                    inst_out <= cache_inst;
-                    cycle <= 2;
-                end else begin
-                    addr <= pc;
-                    mem_req <= 1;
-                    cycle <= 1;
-                end
+                if (cache_hit)
+                    inst_out = cache_inst;
             end
             1: begin
-                if (mem_ready) begin
-                    mem_req <= 0;
-                    inst_out <= data_in;
-                    cycle <= 2;
-                end
+                mem_req = 1;
+                inst_out = data_in;
             end
+            2: cache_we = 1;
+            3: cache_we = 0;
+        endcase
+    end
+end
+
+always @ (posedge clk) begin
+    if (~rst & en) begin
+        case (cycle)
+            0: cycle <= cache_hit ? 2 : 1;
+            1: cycle <= mem_ready ? 2 : 1;
             2: begin
                 cycle <= 3;
                 ready <= 1;
-                cache_we <= 1;
             end
-            3: cache_we <= 0;
         endcase
     end
 
     else begin
-        ready <= 0;
-        mem_req <= 0;
-        cache_we <= 0;
         cycle <= 0;
+        ready <= 0;
     end
 end
 
