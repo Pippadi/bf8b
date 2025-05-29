@@ -161,7 +161,7 @@ always @ (*) begin
                 end
                 OP_INTEGER: begin
                     alu_in1 = rs1;
-                    alu_in2 = imm;
+                    alu_in2 = rs2;
                     alu_funct3 = funct3;
                     alu_modifier = funct7[5];
                 end

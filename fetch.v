@@ -13,6 +13,7 @@ module fetch
     output reg [M_WIDTH-1:0] addr,
     output reg [INST_WIDTH-1:0] inst_out,
     output reg mem_req,
+    output reg busy,
     output reg ready
 );
 
@@ -40,6 +41,8 @@ always @ (*) begin
     mem_req = 0;
     cache_we = 0;
     addr = pc;
+    busy = cycle == 1;
+    ready = cycle == 2 || cycle == 3;
 
     if (~rst & en) begin
         case (cycle)
@@ -62,17 +65,12 @@ always @ (posedge clk) begin
         case (cycle)
             0: cycle <= cache_hit ? 2 : 1;
             1: cycle <= mem_ready ? 2 : 1;
-            2: begin
-                cycle <= 3;
-                ready <= 1;
-            end
+            2: cycle <= 3;
         endcase
     end
 
-    else begin
+    else
         cycle <= 0;
-        ready <= 0;
-    end
 end
 
 endmodule

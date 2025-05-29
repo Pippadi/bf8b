@@ -47,6 +47,8 @@ wire [1:0] fetch_state;
 
 assign fetch_state = {fetch_en, fetch_ready};
 
+wire fetch_busy;
+
 fetch #(
     .M_WIDTH(M_WIDTH),
     .INST_WIDTH(INST_WIDTH)
@@ -60,6 +62,7 @@ fetch #(
     .addr(fetch_addr),
     .inst_out(fetch_inst),
     .mem_req(fetch_mem_req),
+    .busy(fetch_busy),
     .ready(fetch_ready)
 );
 
@@ -258,7 +261,7 @@ always @ (*) begin
     end
 
     else begin
-        if (fetch_should_start(fetch_state)) begin
+        if (fetch_should_start(fetch_state) & ~fetch_busy) begin
             fetch_pc = pc;
             fetch_en = 1;
         end

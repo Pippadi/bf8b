@@ -63,7 +63,6 @@ end
 
 always @(posedge clk) begin
     if (we) begin
-        $display(data_in);
         {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]} <= data_in;
     end
     data_out <= {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
