@@ -13,7 +13,6 @@ module fetch
     output reg [M_WIDTH-1:0] addr,
     output reg [INST_WIDTH-1:0] inst_out,
     output reg mem_req,
-    output reg busy,
     output reg ready
 );
 
@@ -41,8 +40,10 @@ always @ (*) begin
     mem_req = 0;
     cache_we = 0;
     addr = pc;
-    busy = cycle == 1;
-    ready = cycle == 2 || cycle == 3;
+
+    // State is {en, ready}, and 01 is resetting
+    // The last term is to indicate that the fetch stage is resetting
+    ready = cycle == 2 || cycle == 3 || (!en && cycle == 1);
 
     if (~rst & en) begin
         case (cycle)
