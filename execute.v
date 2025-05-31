@@ -53,7 +53,13 @@ module exec
     parameter F3_XOR = 3'b100,
     parameter F3_SR = 3'b101,
     parameter F3_OR = 3'b110,
-    parameter F3_AND = 3'b111
+    parameter F3_AND = 3'b111,
+    parameter F3_EQ = 3'b000,
+    parameter F3_NE = 3'b001,
+    parameter F3_LT = 3'b100,
+    parameter F3_GE = 3'b101,
+    parameter F3_LTU = 3'b110,
+    parameter F3_GEU = 3'b111
 )
 (
     input en,
@@ -164,6 +170,37 @@ always @ (*) begin
                     alu_in2 = rs2;
                     alu_funct3 = funct3;
                     alu_modifier = funct7[5];
+                end
+                OP_BRANCH: begin
+                    alu_in1 = rs1;
+                    alu_in2 = rs2;
+                    pc_out = pc_in + imm;
+                    case (funct3)
+                        F3_EQ: begin
+                            alu_modifier = 1;
+                            flush_pipeline = ~|alu_out;
+                        end
+                        F3_NE: begin
+                            alu_modifier = 1;
+                            flush_pipeline = |alu_out;
+                        end
+                        F3_LT: begin
+                            alu_funct3 = F3_SLT;
+                            flush_pipeline = |alu_out;
+                        end
+                        F3_GE: begin
+                            alu_funct3 = F3_SLT;
+                            flush_pipeline = ~|alu_out;
+                        end
+                        F3_LTU: begin
+                            alu_funct3 = F3_SLTU;
+                            flush_pipeline = |alu_out;
+                        end
+                        F3_GE: begin
+                            alu_funct3 = F3_SLTU;
+                            flush_pipeline = ~|alu_out;
+                        end
+                    endcase
                 end
             endcase
         end
