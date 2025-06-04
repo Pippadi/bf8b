@@ -42,6 +42,7 @@ reg [M_WIDTH-1:0] pc;
 
 reg fetch_en;
 reg [M_WIDTH-1:0] fetch_pc;
+wire [M_WIDTH-1:0] fetch_mem_data_in;
 wire fetch_mem_ready;
 wire fetch_mem_req;
 wire fetch_ready;
@@ -58,7 +59,7 @@ fetch #(
     .rst(rst),
     .en(fetch_en),
     .clk(clk),
-    .data_in(data_in),
+    .data_in(fetch_mem_data_in),
     .pc(fetch_pc),
     .mem_ready(fetch_mem_ready),
     .addr(fetch_addr),
@@ -122,6 +123,7 @@ reg [6:0] exec_funct7;
 wire [M_WIDTH-1:0] exec_data_out;
 wire exec_ready;
 
+wire [M_WIDTH-1:0] exec_mem_data_in;
 wire [M_WIDTH-1:0] exec_mem_addr;
 wire exec_mem_we, exec_mem_req;
 wire exec_mem_ready;
@@ -160,7 +162,7 @@ exec #(
     .funct3(exec_funct3),
     .funct7(exec_funct7),
     .mem_ready(exec_mem_ready),
-    .mem_data_in(data_in),
+    .mem_data_in(exec_mem_data_in),
     .val_out(exec_val_out),
     .mem_addr(exec_mem_addr),
     .mem_data_out(exec_data_out),
@@ -210,12 +212,14 @@ mem_if #(
 ) MemoryInterface (
     .rst(rst),
     .clk(clk),
+    .data_in(data_in),
     .requests({exec_mem_req, fetch_mem_req}),
     .client_addrs_packed({exec_mem_addr, fetch_addr}),
     .client_wes({exec_mem_we, 1'b0}),
     .client_data_widths_packed({exec_mem_acc_width, MEM_ACC_32}),
     .client_data_outs_packed({exec_data_out, {M_WIDTH{1'b0}}}),
     .client_readies({exec_mem_ready, fetch_mem_ready}),
+    .client_data_ins_packed({exec_mem_data_in, fetch_mem_data_in}),
     .data_out(data_out),
     .addr(addr),
     .we_outs(wes)
