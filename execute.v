@@ -59,7 +59,10 @@ module exec
     parameter F3_LT = 3'b100,
     parameter F3_GE = 3'b101,
     parameter F3_LTU = 3'b110,
-    parameter F3_GEU = 3'b111
+    parameter F3_GEU = 3'b111,
+    parameter MEM_ACC_8 = 2'b00,
+    parameter MEM_ACC_16 = 2'b01,
+    parameter MEM_ACC_32 = 2'b10
 )
 (
     input en,
@@ -77,6 +80,7 @@ module exec
     output reg [M_WIDTH-1:0] val_out,
     output reg [M_WIDTH-1:0] mem_addr,
     output reg [M_WIDTH-1:0] mem_data_out,
+    output reg [1:0] mem_acc_width,
     output reg mem_req,
     output reg mem_we,
     output reg flush_pipeline,

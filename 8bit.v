@@ -17,8 +17,8 @@ module eightbit
     input clk,
     input [M_WIDTH-1:0] data_in,
     output [M_WIDTH-1:0] data_out,
-    output [M_WIDTH-1:0] addr,
-    output we
+    output [M_WIDTH-$clog2(M_WIDTH/8)-1:0] addr,
+    output [M_WIDTH/8-1:0] wes
 );
 
 localparam INST_WIDTH = M_WIDTH;
@@ -29,6 +29,10 @@ localparam STATE_IDLE = 2'b00;
 localparam STATE_BUSY = 2'b10;
 localparam STATE_COMPLETE = 2'b11;
 localparam STATE_RESETTING = 2'b01;
+
+localparam MEM_ACC_8 = 2'b00;
+localparam MEM_ACC_16 = 2'b01;
+localparam MEM_ACC_32 = 2'b10;
 
 reg [M_WIDTH-1:0] reg_file [REG_CNT-1:0];
 wire [M_WIDTH*REG_CNT-1:0] packed_reg_file;
@@ -121,6 +125,7 @@ wire exec_ready;
 wire [M_WIDTH-1:0] exec_mem_addr;
 wire exec_mem_we, exec_mem_req;
 wire exec_mem_ready;
+wire [1:0] exec_mem_acc_width;
 
 wire [M_WIDTH-1:0] exec_pc_out;
 wire exec_flush_pipeline;
@@ -140,7 +145,10 @@ exec #(
     .OP_STORE(OP_STORE),
     .OP_BRANCH(OP_BRANCH),
     .OP_INTEGER_IMM(OP_INTEGER_IMM),
-    .OP_INTEGER(OP_INTEGER)
+    .OP_INTEGER(OP_INTEGER),
+    .MEM_ACC_8(MEM_ACC_8),
+    .MEM_ACC_16(MEM_ACC_16),
+    .MEM_ACC_32(MEM_ACC_32)
 ) Execute (
     .en(exec_en),
     .clk(clk),
@@ -158,6 +166,7 @@ exec #(
     .mem_data_out(exec_data_out),
     .mem_req(exec_mem_req),
     .mem_we(exec_mem_we),
+    .mem_acc_width(exec_mem_acc_width),
     .pc_out(exec_pc_out),
     .flush_pipeline(exec_flush_pipeline),
     .ready(exec_ready)
@@ -202,13 +211,14 @@ mem_if #(
     .rst(rst),
     .clk(clk),
     .requests({exec_mem_req, fetch_mem_req}),
-    .addrs({exec_mem_addr, fetch_addr}),
-    .wes({exec_mem_we, 1'b0}),
-    .data_outs({exec_data_out, {M_WIDTH{1'b0}}}),
-    .readies({exec_mem_ready, fetch_mem_ready}),
+    .client_addrs_packed({exec_mem_addr, fetch_addr}),
+    .client_wes({exec_mem_we, 1'b0}),
+    .client_data_widths_packed({exec_mem_acc_width, MEM_ACC_32}),
+    .client_data_outs_packed({exec_data_out, {M_WIDTH{1'b0}}}),
+    .client_readies({exec_mem_ready, fetch_mem_ready}),
     .data_out(data_out),
     .addr(addr),
-    .we(we)
+    .we_outs(wes)
 );
 
 function automatic fetch_should_start(input [1:0] fetch_state);

@@ -5,11 +5,17 @@ module eightbit_tb();
 reg rst;
 reg clk;
 
-reg [7:0] mem [0:4095];
+// Banks of individually addressable memories
+// for writing to non-32b-aligned addresses
+reg [7:0] mem0 [0:1024];
+reg [7:0] mem1 [0:1024];
+reg [7:0] mem2 [0:1024];
+reg [7:0] mem3 [0:1024];
+
 reg [31:0] data_out;
-wire [31:0] addr;
+wire [29:0] addr;
 wire [31:0] data_in;
-wire we;
+wire [3:0] wes;
 
 eightbit #(
     .M_WIDTH(32),
@@ -20,7 +26,7 @@ eightbit #(
     .addr(addr),
     .data_in(data_out),
     .data_out(data_in),
-    .we(we)
+    .wes(wes)
 );
 
 task pulseClk; begin
@@ -62,10 +68,15 @@ initial begin
 end
 
 always @(posedge clk) begin
-    if (we) begin
-        {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]} <= data_in;
-    end
-    data_out <= {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
+    if (wes[0])
+        mem0[addr] <= data_in[7:0];
+    if (wes[1])
+        mem1[addr] <= data_in[15:8];
+    if (wes[2])
+        mem2[addr] <= data_in[23:16];
+    if (wes[3])
+        mem3[addr] <= data_in[31:24];
+    data_out <= {mem3[addr], mem2[addr], mem1[addr], mem0[addr]};
 end
 
 endmodule
