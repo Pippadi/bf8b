@@ -124,6 +124,7 @@ always @ (*) begin
     mem_addr = 0;
     mem_we = 0;
     mem_data_out = 0;
+    mem_acc_width = MEM_ACC_32;
 
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin

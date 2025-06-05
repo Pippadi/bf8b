@@ -7,10 +7,10 @@ reg clk;
 
 // Banks of individually addressable memories
 // for writing to non-32b-aligned addresses
-reg [7:0] mem0 [0:1024];
-reg [7:0] mem1 [0:1024];
-reg [7:0] mem2 [0:1024];
-reg [7:0] mem3 [0:1024];
+reg [7:0] mem0 [0:1023];
+reg [7:0] mem1 [0:1023];
+reg [7:0] mem2 [0:1023];
+reg [7:0] mem3 [0:1023];
 
 reg [31:0] data_out;
 wire [29:0] addr;
@@ -37,13 +37,16 @@ endtask
 
 integer i;
 initial begin
-    $readmemh("fibonacci.hex", mem);
+    $readmemh("fibonacci_block0.hex", mem0);
+    $readmemh("fibonacci_block1.hex", mem1);
+    $readmemh("fibonacci_block2.hex", mem2);
+    $readmemh("fibonacci_block3.hex", mem3);
     $dumpfile("8bit.vcd");
     $dumpvars(0, eightbit_tb);
-    $dumpvars(0, mem[8'hE3]);
-    $dumpvars(0, mem[8'hE2]);
-    $dumpvars(0, mem[8'hE1]);
-    $dumpvars(0, mem[8'hE0]);
+    $dumpvars(0, mem0[8'h38]); // 0x38 = 0xE0 >> 2
+    $dumpvars(0, mem1[8'h38]);
+    $dumpvars(0, mem2[8'h38]);
+    $dumpvars(0, mem3[8'h38]);
     $dumpvars(0, eb.Writeback.reg_file[10]); // a0
     $dumpvars(0, eb.Writeback.reg_file[11]); // a1
     $dumpvars(0, eb.Writeback.reg_file[12]); // a2
@@ -69,13 +72,13 @@ end
 
 always @(posedge clk) begin
     if (wes[0])
-        mem0[addr] <= data_in[7:0];
+        mem0[addr] <= data_in[0+:8];
     if (wes[1])
-        mem1[addr] <= data_in[15:8];
+        mem1[addr] <= data_in[1*8:+8];
     if (wes[2])
-        mem2[addr] <= data_in[23:16];
+        mem2[addr] <= data_in[2*8+:8];
     if (wes[3])
-        mem3[addr] <= data_in[31:24];
+        mem3[addr] <= data_in[3*8:+8];
     data_out <= {mem3[addr], mem2[addr], mem1[addr], mem0[addr]};
 end
 
