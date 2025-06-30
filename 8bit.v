@@ -179,6 +179,7 @@ reg wb_en;
 reg [3:0] wb_op;
 reg [M_WIDTH-1:0] wb_val;
 reg [REG_ADDR_WIDTH-1:0] wb_reg_addr;
+reg [2:0] wb_funct3;
 wire wb_ready;
 wire [1:0] wb_state;
 
@@ -195,11 +196,15 @@ writeback #(
     .OP_LOAD(OP_LOAD),
     .OP_BRANCH(OP_BRANCH),
     .OP_INTEGER_IMM(OP_INTEGER_IMM),
-    .OP_INTEGER(OP_INTEGER)
+    .OP_INTEGER(OP_INTEGER),
+    .MEM_ACC_8(MEM_ACC_8),
+    .MEM_ACC_16(MEM_ACC_16),
+    .MEM_ACC_32(MEM_ACC_32)
 ) Writeback (
     .en(wb_en),
     .clk(clk),
     .op(wb_op),
+    .funct3(wb_funct3),
     .reg_addr(wb_reg_addr),
     .val(wb_val),
     .regs(packed_reg_file),
