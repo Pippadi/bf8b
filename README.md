@@ -1,55 +1,35 @@
 # bf8b
 
-**B**aby's **F**irst **8**-**B**it computer.
+A simple RISC-V CPU core. Currently implements barebones `rv32i`.
 
 My first Verilog project. I have no idea what I'm doing.
+
+> Formerly **B**aby's **F**irst **8**-**B**it computer
 
 ## Details
 
 - 4-stage pipeline with fetch, decode, execute, and writeback
-- 8-bit data bus
-- 8-bit address bus
-- 16 general-purpose registers
-- Up to 16 two-byte instructions (8 implemented so far; nothing set in stone)
+- 32-bit data bus
+- 32-bit address bus
 - LRU Instruction cache
-
-Vivado says 368 LUTs and 454 FFs.
-
-## Instruction set
-
-| Mnemonic | Instruction Format | Description |
-|----------|--------------------|-------------|
-| JMP  | `0000 [REG0]     [OFF8]   ` | `PC` to address `REG0 + OFF` |
-| LOD  | `0001 [REG0] [REG1] [OFF4]` | Load value at address `REG1 + OFF` into `REG0` |
-| STR  | `0010 [REG0] [REG1] [OFF4]` | Store from `REG0` to address `REG1 + OFF` |
-| ADD  | `0011 [REG0] [REG1] [REG2]` | `REG0` = `REG1` + `REG2` |
-| ADDI | `0100 [REG0] [REG1] [IMM4]` | `REG0` = `REG1` + `IMM` |
-| LODI | `0101 [REG0]     [IMM8]   ` | Load `IMM` into `REG0` |
-| NAND | `0110 [REG0] [REG1] [REG2]` | `REG0` = `~(REG1 & REG2)` |
-| JEQZ | `0111 [REG0] [REG1] [OFF4]` | `PC` to address `REG0 + OFF` if `REG1` = 0 |
-
-- `REGn` is the 4-bit address for one of registers `r0` to `r15`
-- `PC` is the program counter
-- `OFF8` is a signed 8-bit offset to be added to the target address
-- `OFF4` is a 4-bit offset, sign-extended to 8 bits, to be added to the target address
-- `IMM8` is an 8-bit immediate
-- `IMM4` is a 4-bit immediate, sign-extended to 8 bits, for the concerned operation
+- In-order execution
+- No exceptions or interrupts yet
 
 ## Programming
 
-I use GCC.
-This is modified from the process I used to compile for the Red-V Thing Plus board, which was itself copied from [here](https://www.youtube.com/watch?v=n8g_XKSSqRo).
-I'm not sure I need all the compilation options, but this worked, so I've left them there for now.
+The [`test/prog2verilog.py`](/test/prog2verilog.py) script converts a RISC-V assembly program into a set of hex files that can be read by the simulator.
+The process it uses is based off of what I learned [here](https://www.youtube.com/watch?v=n8g_XKSSqRo).
+You need the RISC-V GCC toolchain installed to use it (called `cross-riscv64-elf-gcc15` for me on openSUSE).
+
+Use like so:
 
 ```sh
-riscv64-elf-gcc -march=rv32i -mabi=ilp32 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -T./bf8b.ld fibonacci.s -o fibonacci
-riscv64-elf-objcopy -O binary --gap-fill 0x00 --pad-to 0x1000 fibonacci fibonacci.bin
-xxd -g 1 -c 1 -plain fibonacci.bin > fibonacci.hex
+python3 test/prog2verilog.py test/fibonacci.s -d
 ```
 
-Edit [the testbench](/8bit_tb.v) so that the `$readmemh` directive reads the correct hex file.
+Edit [the testbench](/src/bf8b_tb.v) so that the `$readmemh` directives read the correct hex files.
 
-Execution begins at address `0x00`.
+Execution begins at address `0x00` (specified in the [linker script](/test/bf8b.ld)).
 Ensure that you specify an adequate number of clock pulses in the simulation for your program.
 Dump bytes of `mem` relevant to you to the VCD file with `$dumpvars(0, mem[ADDR])`.
 
@@ -59,15 +39,13 @@ The latest commits on the `main` branch _should_ synthesize in Vivado as well.
 ```sh
 make clean
 make
-make 8bit.vcd
+make bf8b.vcd
 make sim
 ```
 
 ## Architectural Notes
 
-An 8-bit data bus is a huge bottleneck when fetching 16-bit instructions.
-Making the memory bus wider would be boring, so an LRU instruction cache has been implemented.
-Its default size is 8 instructions (each cell is 16 bits).
+The LRU instruction cache has a default size of 8 instructions.
 On-the-fly modification of instructions is not supported, as the fetch stage does not check for consistency between cached instructions and memory.
 
 LRU behavior is implemented by building the cache around a modified shift register.
