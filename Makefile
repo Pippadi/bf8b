@@ -4,6 +4,7 @@ SRCS += 8bit.v
 SRCS += 8bit_tb.v
 SRCS += fetch.v
 SRCS += decode.v
+SRCS += alu.v
 SRCS += execute.v
 SRCS += writeback.v
 SRCS += cache.v
