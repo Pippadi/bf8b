@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module eightbit_tb();
+module bf8b_tb();
 
 reg rst;
 reg clk;
@@ -17,10 +17,10 @@ wire [29:0] addr;
 wire [31:0] data_in;
 wire [3:0] wes;
 
-eightbit #(
+bf8b #(
     .M_WIDTH(32),
     .REG_CNT(32)
-) eb (
+) BF8B (
     .rst(rst),
     .clk(clk),
     .addr(addr),
@@ -37,22 +37,34 @@ endtask
 
 integer i;
 initial begin
+    // Memory initialization
+    /*** Change me ***/
     $readmemh("fibonacci_block0.hex", mem0);
     $readmemh("fibonacci_block1.hex", mem1);
     $readmemh("fibonacci_block2.hex", mem2);
     $readmemh("fibonacci_block3.hex", mem3);
-    $dumpfile("8bit.vcd");
-    $dumpvars(0, eightbit_tb);
+    /****************/
+
+    $dumpfile("target/bf8b.vcd");
+    $dumpvars(0, bf8b_tb);
+
+    // Memory content dump
+    /*** Change me ***/
     $dumpvars(0, mem0[8'h38]); // 0x38 = 0xE0 >> 2
     $dumpvars(0, mem1[8'h38]);
     $dumpvars(0, mem2[8'h38]);
     $dumpvars(0, mem3[8'h38]);
-    $dumpvars(0, eb.Writeback.reg_file[10]); // a0
-    $dumpvars(0, eb.Writeback.reg_file[11]); // a1
-    $dumpvars(0, eb.Writeback.reg_file[12]); // a2
+    /****************/
+
+    // Register content dump
+    /*** Change me ***/
+    $dumpvars(0, BF8B.Writeback.reg_file[10]); // a0
+    $dumpvars(0, BF8B.Writeback.reg_file[11]); // a1
+    $dumpvars(0, BF8B.Writeback.reg_file[12]); // a2
+    /****************/
 
     for (i = 0; i < 8; i = i + 1) begin
-        $dumpvars(0, eb.Fetch.ICache.ShiftReg.q[i]);
+        $dumpvars(0, BF8B.Fetch.ICache.ShiftReg.q[i]);
     end
 
     clk = 0;

@@ -1,23 +1,27 @@
 .PHONY += clean sim
 
-SRCS += 8bit.v
-SRCS += 8bit_tb.v
-SRCS += fetch.v
-SRCS += decode.v
-SRCS += alu.v
-SRCS += execute.v
-SRCS += writeback.v
-SRCS += cache.v
-SRCS += mem_if.v
+SRC_DIR := src
+TARGET_DIR := target
 
-eightbit:
-	iverilog -g2012 ${SRCS} -o eightbit
+SRCS += $(SRC_DIR)/bf8b.v
+SRCS += $(SRC_DIR)/bf8b_tb.v
+SRCS += $(SRC_DIR)/fetch.v
+SRCS += $(SRC_DIR)/decode.v
+SRCS += $(SRC_DIR)/alu.v
+SRCS += $(SRC_DIR)/execute.v
+SRCS += $(SRC_DIR)/writeback.v
+SRCS += $(SRC_DIR)/cache.v
+SRCS += $(SRC_DIR)/mem_if.v
 
-8bit.vcd:
-	vvp eightbit
+bf8b:
+	mkdir -p $(TARGET_DIR)
+	iverilog -g2012 ${SRCS} -o $(TARGET_DIR)/bf8b
+
+bf8b.vcd:
+	vvp $(TARGET_DIR)/bf8b
 
 sim:
-	gtkwave 8bit.vcd
+	gtkwave $(TARGET_DIR)/bf8b.vcd
 
 clean:
-	rm 8bit.vcd eightbit
+	rm -r $(TARGET_DIR)
