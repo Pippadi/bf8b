@@ -43,18 +43,15 @@ always @ (*) begin
 
     // State is {en, ready}, and 01 is resetting
     // The last term is to indicate that the fetch stage is resetting
-    ready = cycle == 2 || cycle == 3 || (!en && cycle == 1);
+    //ready = cycle == 2 || cycle == 3 || (!en && cycle == 1);
+
+    // Might cause problems if the memory interface decides to put garbage on
+    // the data in line. Not robust, but good enough for now.
+    inst_out = cache_hit ? cache_inst : data_in;
 
     if (~rst & en) begin
         case (cycle)
-            0: begin
-                if (cache_hit)
-                    inst_out = cache_inst;
-            end
-            1: begin
-                mem_req = 1;
-                inst_out = data_in;
-            end
+            1: mem_req = 1;
             2: cache_we = 1;
             3: cache_we = 0;
         endcase
@@ -66,12 +63,17 @@ always @ (posedge clk) begin
         case (cycle)
             0: cycle <= cache_hit ? 2 : 1;
             1: cycle <= mem_ready ? 2 : 1;
-            2: cycle <= 3;
+            2: begin
+                cycle <= 3;
+                ready <= 1;
+            end
         endcase
     end
 
-    else
+    else begin
         cycle <= 0;
+        ready <= 0;
+    end
 end
 
 endmodule
