@@ -1,4 +1,11 @@
 tags
-bf8b.*
+bf8b.cache
+bf8b.gen
+bf8b.hw
+bf8b.ip_user_files
+bf8b.runs
+bf8b.sim
+bf8b.srcs
+bf8b.xpr
 target
 *.hex
