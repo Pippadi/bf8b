@@ -1,7 +1,7 @@
 module bf8b
 #(
-    parameter M_WIDTH = 8,
-    parameter REG_CNT = 16,
+    parameter M_WIDTH = 32,
+    parameter REG_CNT = 32,
     parameter OP_LUI = 7'b0110111,
     parameter OP_AIUPC = 7'b0010111,
     parameter OP_JAL = 7'b1101111,
