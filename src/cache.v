@@ -1,49 +1,3 @@
-// A multi-bit-wide shift register with exposed enables for each word
-module shift_reg
-#(
-    parameter LENGTH = 8,
-    parameter WIDTH = 8
-)
-(
-    input rst,
-    input clk,
-    input [0:LENGTH-1] en,
-    input [WIDTH-1:0] d,
-    output reg [LENGTH * WIDTH - 1:0] q_packed
-);
-
-reg [WIDTH-1:0] ds [LENGTH-1:0];
-reg [WIDTH-1:0] q [0:LENGTH-1];
-
-integer i;
-always @ (*) begin
-    // Pack the register file to satisfy more strict Verilog rules
-    for (i = 0; i < LENGTH; i = i + 1)
-        q_packed[WIDTH*i +: WIDTH] = q[i];
-
-    // Prepare the flip flops' D inputs
-    ds[0] = d;
-    for (i = 1; i < LENGTH; i = i + 1)
-        ds[i] = q[i-1];
-end
-
-integer j;
-always @ (posedge clk or posedge rst) begin
-    if (rst) begin
-        for (j = 0; j < LENGTH; j = j + 1) begin
-            q[j] <= {WIDTH{1'b1}};
-        end
-    end
-    else begin
-        for (j = 0; j < LENGTH; j = j + 1) begin
-            if (en[j])
-                q[j] <= ds[j];
-        end
-    end
-end
-
-endmodule
-
 module cache
 #(
     parameter ADDR_WIDTH = 8,
@@ -76,7 +30,7 @@ end
 // Shift register to hold data
 // Address is in the upper bits, data is in the lower bits
 // Position in the shift register indicates age
-shift_reg #(
+en_shift_reg #(
     .LENGTH(CELL_CNT),
     .WIDTH(ADDR_WIDTH+DATA_WIDTH)
 ) ShiftReg (

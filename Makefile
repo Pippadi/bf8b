@@ -10,6 +10,7 @@ SRCS += $(SRC_DIR)/decode.v
 SRCS += $(SRC_DIR)/alu.v
 SRCS += $(SRC_DIR)/execute.v
 SRCS += $(SRC_DIR)/writeback.v
+SRCS += $(SRC_DIR)/en_shift_reg.v
 SRCS += $(SRC_DIR)/cache.v
 SRCS += $(SRC_DIR)/mem_if.v
 
