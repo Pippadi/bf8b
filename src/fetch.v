@@ -23,7 +23,7 @@ wire [INST_WIDTH-1:0] cache_inst;
 cache #(
     .DATA_WIDTH(INST_WIDTH),
     .ADDR_WIDTH(M_WIDTH),
-    .CELL_CNT(8)
+    .CELL_CNT(32)
 ) ICache (
     .rst(rst),
     .clk(clk),
