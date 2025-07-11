@@ -28,7 +28,7 @@ always @ (*) begin
 end
 
 integer j;
-always @ (posedge clk or posedge rst) begin
+always @ (posedge clk) begin
     if (rst) begin
         for (j = 0; j < LENGTH; j = j + 1) begin
             q[j] <= {WIDTH{1'b1}};
