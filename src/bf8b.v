@@ -237,13 +237,13 @@ endfunction
 function automatic decode_should_start(input [1:0] fetch_state, decode_state);
     decode_should_start =
         fetch_state == STATE_COMPLETE &&
-        (decode_state == STATE_IDLE);
+        decode_state == STATE_IDLE;
 endfunction
 
 function automatic exec_should_start(input [1:0] decode_state, exec_state);
     exec_should_start =
         decode_state == STATE_COMPLETE &&
-        (exec_state == STATE_IDLE || exec_state == STATE_RESETTING);
+        exec_state == STATE_IDLE;
     // Right now, writeback only takes one cycle to execute. This means that
     // even if writeback is busy, any dependency issue will have been resolved
     // by the time execute actually starts (the cycle after the calling of
