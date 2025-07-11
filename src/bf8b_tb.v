@@ -86,11 +86,11 @@ always @(posedge clk) begin
     if (wes[0])
         mem0[addr] <= data_in[0+:8];
     if (wes[1])
-        mem1[addr] <= data_in[1*8:+8];
+        mem1[addr] <= data_in[1*8+:8];
     if (wes[2])
         mem2[addr] <= data_in[2*8+:8];
     if (wes[3])
-        mem3[addr] <= data_in[3*8:+8];
+        mem3[addr] <= data_in[3*8+:8];
     data_out <= {mem3[addr], mem2[addr], mem1[addr], mem0[addr]};
 end
 
