@@ -43,20 +43,25 @@ en_shift_reg #(
 
 integer j;
 
-// Temporary variable for combinational logic in order to do nonblocking
-// assigns to real registers
-reg [0:CELL_CNT-1] tempEnables;
+reg [0:CELL_CNT-1] cmp_results;
+wire [0:CELL_CNT-1] tempEnables;
+
+prio_enabler #(
+    .CELL_CNT(CELL_CNT)
+) PrioEnabler (
+    .cmp_results(cmp_results),
+    .enables(tempEnables)
+);
 
 always @ (*) begin
-    tempEnables = {CELL_CNT{1'b1}};
     hit = 0;
     data_out = {DATA_WIDTH{1'b0}};
+    cmp_results = 0;
     for (j = 0; j < CELL_CNT; j = j + 1) begin
         if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
             data_out = reg_data[j][DATA_WIDTH-1:0];
             hit = 1;
-            // Age all the data above this one
-            tempEnables = tempEnables << (CELL_CNT-j-1);
+            cmp_results[j] = 1'b1;
         end
     end
 end
