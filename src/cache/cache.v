@@ -10,8 +10,8 @@ module cache
     input we,
     input [ADDR_WIDTH-1:0] addr,
     input [DATA_WIDTH-1:0] data_in,
-    output reg [DATA_WIDTH-1:0] data_out,
-    output reg hit
+    output [DATA_WIDTH-1:0] data_out,
+    output hit
 );
 
 reg [0:CELL_CNT-1] enables;
@@ -41,30 +41,27 @@ en_shift_reg #(
     .q_packed(reg_data_packed)
 );
 
-integer j;
-
 reg [0:CELL_CNT-1] cmp_results;
-wire [0:CELL_CNT-1] tempEnables;
+wire [$clog2(CELL_CNT)-1:0] hit_idx;
+wire [0:CELL_CNT-1] temp_enables;
 
 prio_enabler #(
     .CELL_CNT(CELL_CNT)
 ) PrioEnabler (
     .cmp_results(cmp_results),
-    .enables(tempEnables)
+    .hit_idx(hit_idx),
+    .enables(temp_enables)
 );
 
+integer j;
 always @ (*) begin
-    hit = 0;
-    data_out = {DATA_WIDTH{1'b0}};
-    cmp_results = 0;
     for (j = 0; j < CELL_CNT; j = j + 1) begin
-        if (addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH]) begin
-            data_out = reg_data[j][DATA_WIDTH-1:0];
-            hit = 1;
-            cmp_results[j] = 1'b1;
-        end
+        cmp_results[j] = addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH];
     end
 end
+
+assign hit = |cmp_results;
+assign data_out = hit ? reg_data[hit_idx][DATA_WIDTH-1:0] : {DATA_WIDTH{1'b0}};
 
 // We don't want to spend a cycle shifting in and out the same data at the
 // front of the shift register, so we keep track of the previous address
@@ -76,14 +73,14 @@ always @ (posedge clk) begin
     // Shift in the requested data to make it the least aged
     if (we) begin
         d_shiftin <= {addr, data_in};
-        enables <= tempEnables;
+        enables <= temp_enables;
     end
 
     // Shift in the requested data to make it the least aged, overwriting
     // its old position in the cache
     else if (hit && addr != prevAddr) begin
         d_shiftin <= {addr, data_out};
-        enables <= tempEnables;
+        enables <= temp_enables;
     end
 
     else
