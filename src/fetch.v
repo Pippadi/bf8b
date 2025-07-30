@@ -41,9 +41,7 @@ always @ (*) begin
     cache_we = 0;
     addr = pc;
 
-    // State is {en, ready}, and 01 is resetting
-    // The last term is to indicate that the fetch stage is resetting
-    //ready = cycle == 2 || cycle == 3 || (!en && cycle == 1);
+    ready = cycle == 3;
 
     // Might cause problems if the memory interface decides to put garbage on
     // the data in line. Not robust, but good enough for now.
@@ -63,17 +61,12 @@ always @ (posedge clk) begin
         case (cycle)
             0: cycle <= cache_hit ? 2 : 1;
             1: cycle <= mem_ready ? 2 : 1;
-            2: begin
-                cycle <= 3;
-                ready <= 1;
-            end
+            2: cycle <= 3;
         endcase
     end
 
-    else begin
+    else
         cycle <= 0;
-        ready <= 0;
-    end
 end
 
 endmodule
