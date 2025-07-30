@@ -1,6 +1,6 @@
 module alu
 #(
-    parameter M_WIDTH = 8,
+    parameter M_WIDTH = 32,
     parameter F3_ADD = 3'b000,
     parameter F3_SLL = 3'b001,
     parameter F3_SLT = 3'b010,
@@ -18,9 +18,20 @@ module alu
     output reg [M_WIDTH-1:0] out
 );
 
+wire [M_WIDTH-1:0] adder_out;
+
+adder #(
+    .M_WIDTH(M_WIDTH)
+) Adder (
+    .cin(modifier),
+    .in1(in1),
+    .in2(in2 ^ {M_WIDTH{modifier}}),
+    .out(adder_out)
+);
+
 always @ (*) begin
     case (funct3)
-        F3_ADD: out = in1 + (in2 ^ {M_WIDTH{modifier}}) + modifier;
+        F3_ADD: out = adder_out;
         F3_SLL: out = in1 << in2;
         F3_SLT: out = in1 < in2;
         F3_SLTU: out = {1'b0, in1} < {1'b0, in2};
