@@ -102,9 +102,11 @@ always @ (*) begin
     mem_acc_width = funct3[1:0];
     aux_adder_in1 = imm;
     aux_adder_in2 = rs1;
+    ready = 0;
 
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin
+            ready = cycle == 2;
             case (cycle)
                 0, 1: begin
                     mem_addr = aux_adder_out;
@@ -120,6 +122,7 @@ always @ (*) begin
             endcase
         end
         else begin
+            ready = cycle == 1;
             case (op)
                 OP_LUI: begin
                     alu_in1 = imm;
@@ -198,8 +201,6 @@ reg [1:0] cycle;
 always @ (posedge clk) begin
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin
-            ready <= cycle == 2;
-
             if (cycle == 0)
                 cycle <= 1;
 
@@ -208,14 +209,11 @@ always @ (posedge clk) begin
         end
 
         else begin
-            ready <= cycle;
             if (cycle == 0)
                 cycle <= 1;
         end
-    end else begin
-        ready <= 0;
+    end else
         cycle <= 0;
-    end
 end
 
 endmodule
