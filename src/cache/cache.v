@@ -53,38 +53,28 @@ prio_enabler #(
     .enables(temp_enables)
 );
 
+assign hit = |cmp_results;
+assign data_out = hit ? reg_data[hit_idx][DATA_WIDTH-1:0] : {DATA_WIDTH{1'b0}};
+
 integer j;
 always @ (*) begin
     for (j = 0; j < CELL_CNT; j = j + 1) begin
         cmp_results[j] = addr == reg_data[j][ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH];
     end
-end
 
-assign hit = |cmp_results;
-assign data_out = hit ? reg_data[hit_idx][DATA_WIDTH-1:0] : {DATA_WIDTH{1'b0}};
-
-// We don't want to spend a cycle shifting in and out the same data at the
-// front of the shift register, so we keep track of the previous address
-reg [ADDR_WIDTH-1:0] prevAddr;
-
-always @ (posedge clk) begin
-    prevAddr <= addr;
-
-    // Shift in the requested data to make it the least aged
+    enables = {CELL_CNT{1'b0}};
     if (we) begin
-        d_shiftin <= {addr, data_in};
-        enables <= temp_enables;
+        d_shiftin = {addr, data_in};
+        enables = temp_enables;
     end
 
     // Shift in the requested data to make it the least aged, overwriting
-    // its old position in the cache
-    else if (hit && addr != prevAddr) begin
-        d_shiftin <= {addr, data_out};
-        enables <= temp_enables;
+    // its old position in the cache. Only shift if the hit is not in the
+    // first position.
+    else if (hit && |temp_enables[1:CELL_CNT-1]) begin
+        d_shiftin = {addr, data_out};
+        enables = temp_enables;
     end
-
-    else
-        enables <= {CELL_CNT{1'b0}};
 end
 
 endmodule
