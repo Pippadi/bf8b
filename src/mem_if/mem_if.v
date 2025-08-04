@@ -15,8 +15,8 @@ module mem_if
     input [CLIENT_CNT-1:0] client_wes,
     input [2*CLIENT_CNT-1:0] client_data_widths_packed,
     input [CLIENT_CNT*M_WIDTH-1:0] client_data_outs_packed,
-    output reg [M_WIDTH*CLIENT_CNT-1:0] client_data_ins_packed,
-    output reg [CLIENT_CNT-1:0] client_readies,
+    output [M_WIDTH*CLIENT_CNT-1:0] client_data_ins_packed,
+    output [CLIENT_CNT-1:0] client_readies,
     output reg [M_WIDTH-1:0] mem_data_out,
     output reg [M_WIDTH-$clog2(M_WIDTH/8)-1:0] mem_addr,
     output reg [M_WIDTH/8-1:0] mem_we_outs
