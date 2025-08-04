@@ -217,17 +217,17 @@ mem_if #(
 ) MemoryInterface (
     .rst(rst),
     .clk(clk),
-    .data_in(data_in),
-    .requests({exec_mem_req, fetch_mem_req}),
+    .mem_data_in(data_in),
+    .client_requests({exec_mem_req, fetch_mem_req}),
     .client_addrs_packed({exec_mem_addr, fetch_addr}),
     .client_wes({exec_mem_we, 1'b0}),
     .client_data_widths_packed({exec_mem_acc_width, MEM_ACC_32}),
     .client_data_outs_packed({exec_data_out, {M_WIDTH{1'b0}}}),
     .client_readies({exec_mem_ready, fetch_mem_ready}),
     .client_data_ins_packed({exec_mem_data_in, fetch_mem_data_in}),
-    .data_out(data_out),
-    .addr(addr),
-    .we_outs(wes)
+    .mem_data_out(data_out),
+    .mem_addr(addr),
+    .mem_we_outs(wes)
 );
 
 function automatic fetch_should_start(input [1:0] fetch_state);

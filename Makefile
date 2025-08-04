@@ -14,7 +14,8 @@ SRCS += $(SRC_DIR)/writeback.v
 SRCS += $(SRC_DIR)/cache/en_shift_reg.v
 SRCS += $(SRC_DIR)/cache/prio_enable.v
 SRCS += $(SRC_DIR)/cache/cache.v
-SRCS += $(SRC_DIR)/mem_if.v
+SRCS += $(SRC_DIR)/mem_if/mem_mux.v
+SRCS += $(SRC_DIR)/mem_if/mem_if.v
 
 bf8b:
 	mkdir -p $(TARGET_DIR)
