@@ -63,10 +63,9 @@ always @ (*) begin
     end
 
     enables = {CELL_CNT{1'b0}};
-    if (we) begin
-        d_shiftin = {addr, data_in};
+    d_shiftin = {addr, data_in};
+    if (we)
         enables = temp_enables;
-    end
 
     // Shift in the requested data to make it the least aged, overwriting
     // its old position in the cache. Only shift if the hit is not in the
