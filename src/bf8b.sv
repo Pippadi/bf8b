@@ -264,7 +264,7 @@ always @ (*) begin
     end
 end
 
-always @ (*) begin
+always_latch begin
     if (rst) begin
         pc = 0;
         fetch_en = 0;
