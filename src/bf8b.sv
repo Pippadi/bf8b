@@ -230,95 +230,90 @@ mem_if #(
     .mem_we_outs(wes)
 );
 
-function automatic fetch_should_start(input [1:0] fetch_state);
-    fetch_should_start = fetch_state == STATE_IDLE;
-endfunction
+genvar i;
+generate
+    for (i = 0; i < REG_CNT; i = i + 1) begin
+        assign reg_file[i] = packed_reg_file[M_WIDTH*i +: M_WIDTH];
+    end
+endgenerate
 
-function automatic decode_should_start(input [1:0] fetch_state, decode_state);
+reg fetch_should_start;
+reg decode_should_start;
+reg exec_should_start;
+reg wb_should_start;
+always_comb begin
+    fetch_should_start = fetch_state == STATE_IDLE;
+
     decode_should_start =
         fetch_state == STATE_COMPLETE &&
         decode_state == STATE_IDLE;
-endfunction
 
-function automatic exec_should_start(input [1:0] decode_state, exec_state);
     exec_should_start =
         decode_state == STATE_COMPLETE &&
         exec_state == STATE_IDLE;
     // Right now, writeback only takes one cycle to execute. This means that
     // even if writeback is busy, any dependency issue will have been resolved
-    // by the time execute actually starts (the cycle after the calling of
-    // this function).
-endfunction
+    // by the time execute actually starts.
 
-function automatic wb_should_start(input [1:0] exec_state, wb_state);
     wb_should_start =
         exec_state == STATE_COMPLETE &&
         (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
-endfunction
-
-// Pack the register file to satisfy more strict Verilog rules
-integer i;
-always @ (*) begin
-    for (i = 0; i < REG_CNT; i = i + 1) begin
-        reg_file[i] = packed_reg_file[M_WIDTH*i +: M_WIDTH];
-    end
 end
 
 always_latch begin
     if (rst) begin
-        pc = 0;
-        fetch_en = 0;
-        decode_en = 0;
-        exec_en = 0;
-        wb_en = 0;
-        start_decode = 0;
-        start_exec = 0;
-        start_wb = 0;
+        pc <= 0;
+        fetch_en <= 0;
+        decode_en <= 0;
+        exec_en <= 0;
+        wb_en <= 0;
+        start_decode <= 0;
+        start_exec <= 0;
+        start_wb <= 0;
     end
 
     else begin
-        if (fetch_should_start(fetch_state)) begin
-            fetch_pc = pc;
-            fetch_en = 1;
+        if (fetch_should_start) begin
+            fetch_pc <= pc;
+            fetch_en <= 1;
         end
 
-        if (decode_should_start(fetch_state, decode_state)) begin
-            decode_pc = fetch_pc;
-            decode_inst = fetch_inst;
-            fetch_en = 0;
-            pc = pc + (INST_WIDTH / 8);
-            decode_en = 1;
+        if (decode_should_start) begin
+            decode_pc <= fetch_pc;
+            decode_inst <= fetch_inst;
+            fetch_en <= 0;
+            pc <= pc + (INST_WIDTH / 8);
+            decode_en <= 1;
         end
 
-        if (exec_should_start(decode_state, exec_state)) begin
-            exec_op = decode_op;
-            exec_pc_in = decode_pc;
-            exec_wb_addr = decode_rd;
-            exec_rs1_in = reg_file[decode_rs1];
-            exec_rs2_in = reg_file[decode_rs2];
-            exec_imm_in = decode_imm;
-            exec_funct3 = decode_funct3;
-            exec_funct7 = decode_funct7;
-            exec_en = 1;
-            decode_en = 0;
+        if (exec_should_start) begin
+            exec_op <= decode_op;
+            exec_pc_in <= decode_pc;
+            exec_wb_addr <= decode_rd;
+            exec_rs1_in <= reg_file[decode_rs1];
+            exec_rs2_in <= reg_file[decode_rs2];
+            exec_imm_in <= decode_imm;
+            exec_funct3 <= decode_funct3;
+            exec_funct7 <= decode_funct7;
+            exec_en <= 1;
+            decode_en <= 0;
         end
 
-        if (wb_should_start(exec_state, wb_state)) begin
-            wb_op = exec_op;
-            wb_reg_addr = exec_wb_addr;
-            wb_val = exec_val_out;
-            exec_en = 0;
+        if (wb_should_start) begin
+            wb_op <= exec_op;
+            wb_reg_addr <= exec_wb_addr;
+            wb_val <= exec_val_out;
+            exec_en <= 0;
             if (exec_flush_pipeline) begin
-                pc = exec_pc_out;
-                fetch_en = 0;
-                decode_en = 0;
+                pc <= exec_pc_out;
+                fetch_en <= 0;
+                decode_en <= 0;
             end else
-                wb_en = 1;
+                wb_en <= 1;
         end
 
-        if (wb_state == STATE_COMPLETE) begin
-            wb_en = 0;
-        end
+        if (wb_state == STATE_COMPLETE)
+            wb_en <= 0;
     end
 end
 
