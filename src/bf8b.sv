@@ -260,6 +260,11 @@ always_comb begin
         (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
 end
 
+wire [M_WIDTH-1:0] next_exec_rs1;
+assign next_exec_rs1 = reg_file[decode_rs1];
+wire [M_WIDTH-1:0] next_exec_rs2;
+assign next_exec_rs2 = reg_file[decode_rs2];
+
 always_latch begin
     if (rst) begin
         pc <= 0;
@@ -290,8 +295,8 @@ always_latch begin
             exec_op <= decode_op;
             exec_pc_in <= decode_pc;
             exec_wb_addr <= decode_rd;
-            exec_rs1_in <= reg_file[decode_rs1];
-            exec_rs2_in <= reg_file[decode_rs2];
+            exec_rs1_in <= next_exec_rs1;
+            exec_rs2_in <= next_exec_rs2;
             exec_imm_in <= decode_imm;
             exec_funct3 <= decode_funct3;
             exec_funct7 <= decode_funct7;
@@ -318,3 +323,4 @@ always_latch begin
 end
 
 endmodule
+
