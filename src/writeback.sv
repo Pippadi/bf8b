@@ -18,7 +18,7 @@ module writeback
 (
     input en,
     input clk,
-    input [3:0] op,
+    input [6:0] op,
     input [2:0] funct3,
     input [REG_ADDR_WIDTH-1:0] reg_addr,
     input [M_WIDTH-1:0] val,

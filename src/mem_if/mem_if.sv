@@ -55,82 +55,87 @@ mem_mux #(
     .mem_we_out(client_we)
 );
 
+typedef enum bit[2:0] {
+    MEM_IDLE = 3'b000,
+    MEM_ACC_H_1 = 3'b001,
+    MEM_ACC_H_2 = 3'b010,
+    MEM_ACC_L_1 = 3'b011,
+    MEM_ACC_L_2 = 3'b100,
+    MEM_READY = 3'b101
+} mem_state_t;
+
 localparam BANK_SEL_WIDTH = $clog2(M_WIDTH/8);
 localparam ADDR_WIDTH = M_WIDTH-BANK_SEL_WIDTH;
 
-reg [1:0] mem_cycle;
-reg [1:0] prev_mem_cycle;
+mem_state_t mem_cycle;
+reg single_cycle_acc;
 
 reg [BANK_SEL_WIDTH-1:0] shift_amt_temp;
-reg [BANK_SEL_WIDTH-1:0] shift_amt_0;
-reg [BANK_SEL_WIDTH-1:0] shift_amt_1;
+reg [BANK_SEL_WIDTH-1:0] shift_amt_lo;
+reg [BANK_SEL_WIDTH-1:0] shift_amt_hi;
 
 always @ (*) begin
     mem_we_outs = 0;
+    mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH];
     shift_amt_temp = client_addr[BANK_SEL_WIDTH-1:0];
+
     case (mem_cycle)
-        0: if (client_request) begin
-            shift_amt_0 = shift_amt_temp;
-            shift_amt_1 = ~shift_amt_0 + 1;
-            mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH];
-            mem_data_out = client_data_out << (8*shift_amt_0);
+        MEM_IDLE: if (client_request) begin
+            single_cycle_acc = (client_data_width == MEM_ACC_8) 
+                || (client_data_width == MEM_ACC_16 && shift_amt_lo != 3)
+                || (client_data_width == MEM_ACC_32 && shift_amt_lo == 0);
+            shift_amt_lo = shift_amt_temp;
+            shift_amt_hi = ~shift_amt_lo + 1;
+            client_data_in = 0;
             client_ready = 0;
-
-            case (client_data_width)
-                MEM_ACC_8: mem_we_outs = client_we << shift_amt_0;
-                MEM_ACC_16: mem_we_outs = {2{client_we}} << shift_amt_0;
-                MEM_ACC_32: mem_we_outs = {4{client_we}} << shift_amt_0;
-            endcase
         end
 
-        1: begin
+        MEM_ACC_H_1, MEM_ACC_H_2: begin
             mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH] + 1;
-            mem_data_out = client_data_out << (8*shift_amt_1);
-            client_data_in = mem_data_in >> (8*shift_amt_0);
+            client_data_in = mem_data_in << (8*shift_amt_hi);
+            mem_data_out = client_data_out >> (8*shift_amt_hi);
             client_ready = 0;
+
             case (client_data_width)
-                MEM_ACC_16: mem_we_outs = {2{client_we}} >> shift_amt_1;
-                MEM_ACC_32: mem_we_outs = {4{client_we}} >> shift_amt_1;
+                MEM_ACC_16: mem_we_outs = {2{client_we}} >> shift_amt_hi;
+                MEM_ACC_32: mem_we_outs = {4{client_we}} >> shift_amt_hi;
             endcase
         end
 
-        2: begin
+        MEM_ACC_L_1, MEM_ACC_L_2: begin
+            client_data_in = client_data_in | (mem_data_in >> (8*shift_amt_lo));
+            mem_data_out = client_data_out << (8*shift_amt_lo);
+
             case (client_data_width)
-                MEM_ACC_8: client_data_in = mem_data_in >> (8*shift_amt_0);
-                MEM_ACC_16, MEM_ACC_32: begin
-                    if (prev_mem_cycle == 0)
-                        client_data_in = mem_data_in >> (8*shift_amt_0);
-                    else
-                        client_data_in = client_data_in | mem_data_in >> (8*shift_amt_1);
-                end
+                MEM_ACC_8: mem_we_outs = client_we << shift_amt_lo;
+                MEM_ACC_16: mem_we_outs = {2{client_we}} << shift_amt_lo;
+                MEM_ACC_32: mem_we_outs = {4{client_we}} << shift_amt_lo;
             endcase
-            client_ready = 1'b1;
+
+            client_ready = mem_cycle == MEM_ACC_L_2;
         end
 
-        3: client_ready = client_request;
+
+        MEM_READY: client_ready = client_request;
     endcase
 end
 
-always @ (posedge clk) begin
+always_ff @ (posedge clk) begin
     if (rst) begin
-        mem_cycle <= 0;
-        prev_mem_cycle <= 0;
+        mem_cycle <= MEM_IDLE;
     end else begin
-        prev_mem_cycle <= mem_cycle;
         case (mem_cycle)
-            0: if (client_request) begin
-                case (client_data_width)
-                    MEM_ACC_8: mem_cycle <= 2;
-                    MEM_ACC_16: mem_cycle <= (shift_amt_0 == 3) ? 1 : 2;
-                    MEM_ACC_32: mem_cycle <= (shift_amt_0 == 0) ? 2 : 1;
-                endcase
+            MEM_IDLE: begin
+                if (client_request)
+                    mem_cycle <= single_cycle_acc ? MEM_ACC_L_1 : MEM_ACC_H_1;
             end
 
-            1: mem_cycle <= 2;
+            MEM_ACC_H_1: mem_cycle <= MEM_ACC_H_2;
+            MEM_ACC_H_2: mem_cycle <= MEM_ACC_L_1;
+            MEM_ACC_L_1: mem_cycle <= MEM_ACC_L_2;
+            MEM_ACC_L_2: mem_cycle <= MEM_READY;
 
-            2: mem_cycle <= 3;
-
-            3: mem_cycle <= client_request ? 3 : 0;
+            MEM_READY: mem_cycle <= client_request ? MEM_READY : MEM_IDLE;
         endcase
     end
 end

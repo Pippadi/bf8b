@@ -61,6 +61,7 @@ initial begin
     $dumpvars(0, BF8B.Writeback.reg_file[10]); // a0
     $dumpvars(0, BF8B.Writeback.reg_file[11]); // a1
     $dumpvars(0, BF8B.Writeback.reg_file[12]); // a2
+    $dumpvars(0, BF8B.Writeback.reg_file[13]); // a3
     /****************/
 
     for (i = 0; i < 8; i = i + 1) begin

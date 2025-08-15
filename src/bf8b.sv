@@ -176,7 +176,7 @@ exec #(
 
 reg start_wb;
 reg wb_en;
-reg [3:0] wb_op;
+reg [6:0] wb_op;
 reg [M_WIDTH-1:0] wb_val;
 reg [REG_ADDR_WIDTH-1:0] wb_reg_addr;
 reg [2:0] wb_funct3;
@@ -306,6 +306,7 @@ always_latch begin
 
         if (wb_should_start) begin
             wb_op <= exec_op;
+            wb_funct3 <= exec_funct3;
             wb_reg_addr <= exec_wb_addr;
             wb_val <= exec_val_out;
             exec_en <= 0;
