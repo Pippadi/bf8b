@@ -102,7 +102,7 @@ always @ (*) begin
     mem_acc_width = funct3[1:0];
     aux_adder_in1 = imm;
     aux_adder_in2 = rs1;
-    ready = 0;
+    ready = cycle != 0; // When cycle isn't 0 but enable is, signal resetting
 
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin
