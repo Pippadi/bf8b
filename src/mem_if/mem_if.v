@@ -55,19 +55,17 @@ mem_mux #(
     .mem_we_out(client_we)
 );
 
-typedef enum bit[2:0] {
-    MEM_IDLE = 3'b000,
-    MEM_ACC_H_1 = 3'b001,
-    MEM_ACC_H_2 = 3'b010,
-    MEM_ACC_L_1 = 3'b011,
-    MEM_ACC_L_2 = 3'b100,
-    MEM_READY = 3'b101
-} mem_state_t;
+localparam MEM_IDLE = 3'b000;
+localparam MEM_ACC_H_1 = 3'b001;
+localparam MEM_ACC_H_2 = 3'b010;
+localparam MEM_ACC_L_1 = 3'b011;
+localparam MEM_ACC_L_2 = 3'b100;
+localparam MEM_READY = 3'b101;
 
 localparam BANK_SEL_WIDTH = $clog2(M_WIDTH/8);
 localparam ADDR_WIDTH = M_WIDTH-BANK_SEL_WIDTH;
 
-mem_state_t mem_cycle;
+reg [2:0] mem_cycle;
 reg single_cycle_acc;
 
 reg [BANK_SEL_WIDTH-1:0] shift_amt_temp;
