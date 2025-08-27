@@ -34,7 +34,7 @@ localparam MEM_ACC_8 = 2'b00;
 localparam MEM_ACC_16 = 2'b01;
 localparam MEM_ACC_32 = 2'b10;
 
-reg [M_WIDTH-1:0] reg_file [REG_CNT-1:0];
+wire [M_WIDTH-1:0] reg_file [REG_CNT-1:0];
 wire [M_WIDTH*REG_CNT-1:0] packed_reg_file;
 
 reg [M_WIDTH-1:0] pc, pc_next;

@@ -67,6 +67,7 @@ localparam ADDR_WIDTH = M_WIDTH-BANK_SEL_WIDTH;
 
 reg [2:0] mem_cycle;
 reg single_cycle_acc;
+reg [M_WIDTH-1:0] hi_data_in;
 
 reg [BANK_SEL_WIDTH-1:0] shift_amt_temp;
 reg [BANK_SEL_WIDTH-1:0] shift_amt_lo;
@@ -79,9 +80,9 @@ always @ (*) begin
 
     case (mem_cycle)
         MEM_IDLE: if (client_request) begin
-            single_cycle_acc = (client_data_width == MEM_ACC_8) 
-                || (client_data_width == MEM_ACC_16 && shift_amt_lo != 3)
-                || (client_data_width == MEM_ACC_32 && shift_amt_lo == 0);
+            single_cycle_acc = (client_data_width == MEM_ACC_8)
+            || (client_data_width == MEM_ACC_16 && shift_amt_lo != 3)
+            || (client_data_width == MEM_ACC_32 && shift_amt_lo == 0);
             shift_amt_lo = shift_amt_temp;
             shift_amt_hi = ~shift_amt_lo + 1;
             client_data_in = 0;
@@ -90,8 +91,9 @@ always @ (*) begin
 
         MEM_ACC_H_1, MEM_ACC_H_2: begin
             mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH] + 1;
-            client_data_in = mem_data_in << (8*shift_amt_hi);
+            hi_data_in = mem_data_in << (8*shift_amt_hi);
             mem_data_out = client_data_out >> (8*shift_amt_hi);
+            client_data_in = 0;
             client_ready = 0;
 
             case (client_data_width)
@@ -101,7 +103,7 @@ always @ (*) begin
         end
 
         MEM_ACC_L_1, MEM_ACC_L_2: begin
-            client_data_in = client_data_in | (mem_data_in >> (8*shift_amt_lo));
+            client_data_in = hi_data_in | (mem_data_in >> (8*shift_amt_lo));
             mem_data_out = client_data_out << (8*shift_amt_lo);
 
             case (client_data_width)
@@ -112,7 +114,6 @@ always @ (*) begin
 
             client_ready = mem_cycle == MEM_ACC_L_2;
         end
-
 
         MEM_READY: client_ready = client_request;
     endcase
