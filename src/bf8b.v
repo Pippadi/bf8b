@@ -37,11 +37,10 @@ localparam MEM_ACC_32 = 2'b10;
 reg [M_WIDTH-1:0] reg_file [REG_CNT-1:0];
 wire [M_WIDTH*REG_CNT-1:0] packed_reg_file;
 
-reg [M_WIDTH-1:0] a, b;
-reg [M_WIDTH-1:0] pc;
+reg [M_WIDTH-1:0] pc, pc_next;
 
-reg fetch_en;
-reg [M_WIDTH-1:0] fetch_pc;
+reg fetch_en, fetch_en_next;
+reg [M_WIDTH-1:0] fetch_pc, fetch_pc_next;
 wire [M_WIDTH-1:0] fetch_mem_data_in;
 wire fetch_mem_ready;
 wire fetch_mem_req;
@@ -68,10 +67,9 @@ fetch #(
     .ready(fetch_ready)
 );
 
-reg start_decode;
-reg decode_en;
-reg [INST_WIDTH-1:0] decode_inst;
-reg [M_WIDTH-1:0] decode_pc;
+reg decode_en, decode_en_next;
+reg [INST_WIDTH-1:0] decode_inst, decode_inst_next;
+reg [M_WIDTH-1:0] decode_pc, decode_pc_next;
 wire decode_ready;
 wire [OP_WIDTH-1:0] decode_op;
 wire [REG_ADDR_WIDTH-1:0] decode_rd, decode_rs1, decode_rs2;
@@ -110,16 +108,15 @@ decode #(
     .ready(decode_ready)
 );
 
-reg start_exec;
-reg exec_en;
-reg [OP_WIDTH-1:0] exec_op;
-reg [REG_ADDR_WIDTH-1:0] exec_wb_addr;
-reg [M_WIDTH-1:0] exec_pc_in;
-reg [M_WIDTH-1:0] exec_rs1_in;
-reg [M_WIDTH-1:0] exec_rs2_in;
-reg [M_WIDTH-1:0] exec_imm_in;
-reg [2:0] exec_funct3;
-reg [6:0] exec_funct7;
+reg exec_en, exec_en_next;
+reg [OP_WIDTH-1:0] exec_op, exec_op_next;
+reg [REG_ADDR_WIDTH-1:0] exec_wb_addr, exec_wb_addr_next;
+reg [M_WIDTH-1:0] exec_pc_in, exec_pc_in_next;
+reg [M_WIDTH-1:0] exec_rs1_in, exec_rs1_in_next;
+reg [M_WIDTH-1:0] exec_rs2_in, exec_rs2_in_next;
+reg [M_WIDTH-1:0] exec_imm_in, exec_imm_in_next;
+reg [2:0] exec_funct3, exec_funct3_next;
+reg [6:0] exec_funct7, exec_funct7_next;
 wire [M_WIDTH-1:0] exec_data_out;
 wire exec_ready;
 
@@ -174,12 +171,11 @@ exec #(
     .ready(exec_ready)
 );
 
-reg start_wb;
-reg wb_en;
-reg [6:0] wb_op;
-reg [M_WIDTH-1:0] wb_val;
-reg [REG_ADDR_WIDTH-1:0] wb_reg_addr;
-reg [2:0] wb_funct3;
+reg wb_en, wb_en_next;
+reg [6:0] wb_op, wb_op_next;
+reg [M_WIDTH-1:0] wb_val, wb_val_next;
+reg [REG_ADDR_WIDTH-1:0] wb_reg_addr, wb_reg_addr_next;
+reg [2:0] wb_funct3, wb_funct3_next;
 wire wb_ready;
 wire [1:0] wb_state;
 
@@ -256,70 +252,127 @@ always_comb begin
     // by the time execute actually starts.
 
     wb_should_start =
-        exec_state == STATE_COMPLETE &&
-        (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
+    exec_state == STATE_COMPLETE &&
+    (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
 end
 
-wire [M_WIDTH-1:0] next_exec_rs1;
-assign next_exec_rs1 = reg_file[decode_rs1];
-wire [M_WIDTH-1:0] next_exec_rs2;
-assign next_exec_rs2 = reg_file[decode_rs2];
+always @ (*) begin
+    pc_next = pc;
 
-always_latch begin
-    if (rst) begin
-        pc <= 0;
-        fetch_en <= 0;
-        decode_en <= 0;
-        exec_en <= 0;
-        wb_en <= 0;
-        start_decode <= 0;
-        start_exec <= 0;
-        start_wb <= 0;
+    fetch_en_next = fetch_en;
+    fetch_pc_next = fetch_pc;
+    if (fetch_should_start) begin
+        fetch_en_next = 1;
+        fetch_pc_next = pc;
     end
 
-    else begin
-        if (fetch_should_start) begin
-            fetch_pc <= pc;
-            fetch_en <= 1;
-        end
+    decode_en_next = decode_en;
+    decode_inst_next = decode_inst;
+    decode_pc_next = decode_pc;
+    if (decode_should_start) begin
+        decode_en_next = 1;
+        decode_inst_next = fetch_inst;
+        decode_pc_next = fetch_pc;
+        fetch_en_next = 0;
+        pc_next = pc + (INST_WIDTH / 8);
+    end
 
-        if (decode_should_start) begin
-            decode_pc <= fetch_pc;
-            decode_inst <= fetch_inst;
-            fetch_en <= 0;
-            pc <= pc + (INST_WIDTH / 8);
-            decode_en <= 1;
-        end
+    exec_en_next = exec_en;
+    exec_op_next = exec_op;
+    exec_pc_in_next = exec_pc_in;
+    exec_wb_addr_next = exec_wb_addr;
+    exec_rs1_in_next = exec_rs1_in;
+    exec_rs2_in_next = exec_rs2_in;
+    exec_imm_in_next = exec_imm_in;
+    exec_funct3_next = exec_funct3;
+    exec_funct7_next = exec_funct7;
+    if (exec_should_start) begin
+        exec_en_next = 1;
+        exec_op_next = decode_op;
+        exec_pc_in_next = decode_pc;
+        exec_wb_addr_next = decode_rd;
+        exec_rs1_in_next = reg_file[decode_rs1];
+        exec_rs2_in_next = reg_file[decode_rs2];
+        exec_imm_in_next = decode_imm;
+        exec_funct3_next = decode_funct3;
+        exec_funct7_next = decode_funct7;
+        decode_en_next = 0;
+    end
 
-        if (exec_should_start) begin
-            exec_op <= decode_op;
-            exec_pc_in <= decode_pc;
-            exec_wb_addr <= decode_rd;
-            exec_rs1_in <= next_exec_rs1;
-            exec_rs2_in <= next_exec_rs2;
-            exec_imm_in <= decode_imm;
-            exec_funct3 <= decode_funct3;
-            exec_funct7 <= decode_funct7;
-            exec_en <= 1;
-            decode_en <= 0;
-        end
+    wb_en_next = wb_en;
+    wb_op_next = wb_op;
+    wb_funct3_next = wb_funct3;
+    wb_reg_addr_next = wb_reg_addr;
+    wb_val_next = wb_val;
+    if (wb_should_start) begin
+        wb_op_next = exec_op;
+        wb_funct3_next = exec_funct3;
+        wb_reg_addr_next = exec_wb_addr;
+        wb_val_next = exec_val_out;
+        exec_en_next = 0;
+        if (exec_flush_pipeline) begin
+            pc_next = exec_pc_out;
+            fetch_en_next = 0;
+            decode_en_next = 0;
+        end else
+            wb_en_next = 1;
+    end
 
-        if (wb_should_start) begin
-            wb_op <= exec_op;
-            wb_funct3 <= exec_funct3;
-            wb_reg_addr <= exec_wb_addr;
-            wb_val <= exec_val_out;
-            exec_en <= 0;
-            if (exec_flush_pipeline) begin
-                pc <= exec_pc_out;
-                fetch_en <= 0;
-                decode_en <= 0;
-            end else
-                wb_en <= 1;
-        end
+    if (wb_state == STATE_COMPLETE)
+        wb_en_next = 0;
+end
 
-        if (wb_state == STATE_COMPLETE)
-            wb_en <= 0;
+always @ (posedge clk) begin
+    if (rst) begin
+        pc <= 0;
+
+        fetch_en <= 0;
+        fetch_pc <= 0;
+
+        decode_en <= 0;
+        decode_inst <= 0;
+        decode_pc <= 0;
+
+        exec_en <= 0;
+        exec_op <= 0;
+        exec_pc_in <= 0;
+        exec_wb_addr <= 0;
+        exec_rs1_in <= 0;
+        exec_rs2_in <= 0;
+        exec_imm_in <= 0;
+        exec_funct3 <= 0;
+        exec_funct7 <= 0;
+
+        wb_en <= 0;
+        wb_op <= 0;
+        wb_funct3 <= 0;
+        wb_reg_addr <= 0;
+        wb_val <= 0;
+    end else begin
+        pc <= pc_next;
+
+        fetch_en <= fetch_en_next;
+        fetch_pc <= fetch_pc_next;
+
+        decode_en <= decode_en_next;
+        decode_inst <= decode_inst_next;
+        decode_pc <= decode_pc_next;
+
+        exec_en <= exec_en_next;
+        exec_op <= exec_op_next;
+        exec_pc_in <= exec_pc_in_next;
+        exec_wb_addr <= exec_wb_addr_next;
+        exec_rs1_in <= exec_rs1_in_next;
+        exec_rs2_in <= exec_rs2_in_next;
+        exec_imm_in <= exec_imm_in_next;
+        exec_funct3 <= exec_funct3_next;
+        exec_funct7 <= exec_funct7_next;
+
+        wb_en <= wb_en_next;
+        wb_op <= wb_op_next;
+        wb_funct3 <= wb_funct3_next;
+        wb_reg_addr <= wb_reg_addr_next;
+        wb_val <= wb_val_next;
     end
 end
 

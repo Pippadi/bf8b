@@ -3,7 +3,7 @@
 SRC_DIR := src
 TARGET_DIR := target
 
-SRCS += $(SRC_DIR)/bf8b.sv
+SRCS += $(SRC_DIR)/bf8b.v
 SRCS += $(SRC_DIR)/bf8b_tb.sv
 SRCS += $(SRC_DIR)/fetch.sv
 SRCS += $(SRC_DIR)/decode.sv
