@@ -237,7 +237,7 @@ reg fetch_should_start;
 reg decode_should_start;
 reg exec_should_start;
 reg wb_should_start;
-always_comb begin
+always @ (*) begin
     fetch_should_start = fetch_state == STATE_IDLE;
 
     decode_should_start =

@@ -120,7 +120,7 @@ always @ (*) begin
     endcase
 end
 
-always_ff @ (posedge clk) begin
+always @ (posedge clk) begin
     if (rst) begin
         mem_cycle <= MEM_IDLE;
     end else begin
