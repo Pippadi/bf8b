@@ -207,6 +207,13 @@ writeback #(
     .ready(wb_ready)
 );
 
+wire tx;
+uart UART (
+    .rst(rst),
+    .clk(clk),
+    .tx(tx)
+);
+
 mem_if #(
     .M_WIDTH(M_WIDTH),
     .CLIENT_CNT(2)

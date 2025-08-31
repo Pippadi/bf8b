@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 10ns / 1ns
 
 module bf8b_tb();
 
@@ -30,8 +30,8 @@ bf8b #(
 );
 
 task pulseClk; begin
-    #0.5 clk = ~clk;
-    #0.5 clk = ~clk;
+    #1 clk = ~clk;
+    #1 clk = ~clk;
 end
 endtask
 
@@ -77,7 +77,7 @@ initial begin
         end
 
         begin
-            for (i = 0; i < 512; i = i + 1)
+            for (i = 0; i < 4096; i = i + 1)
                 pulseClk();
         end
     join
