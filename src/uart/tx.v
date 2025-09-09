@@ -1,49 +1,62 @@
 module tx
 #(
-    parameter CLOCK_FREQUENCY = 50000000, // 50 MHz
+    parameter CLK_FREQ = 50_000_000,
     parameter BAUD_RATE = 115200
 ) (
     input rst,
     input clk,
+    input data_available,
     input [7:0] data,
-    output wire tx
+    output reg req,
+    output wire tx,
+    output wire busy
 );
 
-reg [9:0] tx_ctr;
 reg tx_clk;
-
-reg [4:0] bit_cnt;
 reg [9:0] tx_byte_buf;
+reg [3:0] bit_cnt;
+reg data_requested;
 
-always @(posedge clk) begin
+reg [$clog2(CLK_FREQ/(BAUD_RATE*2)):0] ctr;
+
+always @ (posedge clk) begin
     if (rst) begin
-        tx_ctr <= 0;
+        ctr <= 0;
         tx_clk <= 0;
         bit_cnt <= 0;
         tx_byte_buf <= 10'b0;
     end else begin
-        if (tx_ctr == (CLOCK_FREQUENCY / BAUD_RATE) - 1) begin
-            tx_ctr <= 0;
+        if (ctr == (CLK_FREQ / BAUD_RATE) - 1) begin
+            ctr <= 0;
             tx_clk <= 0;
-        end else begin
-            tx_ctr <= tx_ctr + 1;
-        end
+        end else
+            ctr <= ctr + 1;
 
-        if (tx_ctr == (CLOCK_FREQUENCY / (2*BAUD_RATE)))
+        if (CLK_FREQ / (2*BAUD_RATE))
             tx_clk <= 1;
+
+        if (data_available & ~busy & ~data_requested) begin
+            req <= 1;
+            data_requested <= 1;
+        end else begin
+            req <= 0;
+        end
     end
 end
 
-always @(posedge tx_clk) begin
-    if (bit_cnt == 0) begin
+always @ (posedge tx_clk) begin
+    // Possible race condition? Should be fine since data_requested is only
+    // set when not busy. Hopefully one cycle is enough for data to be valid.
+    if (bit_cnt == 0 && data_requested) begin
         tx_byte_buf <= {1'b0, data, 1'b1};
-        bit_cnt <= 10;
+        data_requested <= 0;
     end else begin
-        tx_byte_buf <= {1'b0, tx_byte_buf[8:1]};
+        tx_byte_buf <= {1'b0, tx_byte_buf[9:1]};
         bit_cnt <= bit_cnt - 1;
     end
 end
 
-assign tx = ~tx_byte_buf[0];
+assign busy = bit_cnt != 0;
+assign tx = ~tx_byte_buf[0] | rst;
 
 endmodule

@@ -77,7 +77,7 @@ initial begin
         end
 
         begin
-            for (i = 0; i < 4096; i = i + 1)
+            for (i = 0; i < 6144; i = i + 1)
                 pulseClk();
         end
     join

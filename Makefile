@@ -16,8 +16,9 @@ SRCS += $(SRC_DIR)/cache/prio_enable.v
 SRCS += $(SRC_DIR)/cache/cache.v
 SRCS += $(SRC_DIR)/mem_if/mem_mux.v
 SRCS += $(SRC_DIR)/mem_if/mem_if.v
-SRCS += $(SRC_DIR)/uart/uart.v
 SRCS += $(SRC_DIR)/uart/tx.v
+SRCS += $(SRC_DIR)/uart/fifo.v
+SRCS += $(SRC_DIR)/uart/uart.v
 
 bf8b:
 	mkdir -p $(TARGET_DIR)
