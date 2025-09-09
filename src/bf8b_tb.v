@@ -59,12 +59,9 @@ initial begin
     /****************/
 
     // Register content dump
-    /*** Change me ***/
-    $dumpvars(0, BF8B.Writeback.reg_file[10]); // a0
-    $dumpvars(0, BF8B.Writeback.reg_file[11]); // a1
-    $dumpvars(0, BF8B.Writeback.reg_file[12]); // a2
-    $dumpvars(0, BF8B.Writeback.reg_file[13]); // a3
-    /****************/
+    for (i = 1; i < 32; i = i + 1) begin
+        $dumpvars(0, BF8B.Writeback.reg_file[i]);
+    end
 
     for (i = 0; i < 8; i = i + 1) begin
         $dumpvars(0, BF8B.Fetch.ICache.ShiftReg.q[i]);

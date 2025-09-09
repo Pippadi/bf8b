@@ -29,12 +29,12 @@ module writeback
 reg [M_WIDTH-1:0] reg_file [0:REG_CNT-1];
 
 // Pack the unpacked register file
-integer i;
-always @ (*) begin
+genvar i;
+generate
     for (i = 0; i < REG_CNT; i = i + 1) begin
-        regs[M_WIDTH*i +: M_WIDTH] = reg_file[i];
+        assign regs[M_WIDTH*i +: M_WIDTH] = reg_file[i];
     end
-end
+endgenerate
 
 function automatic needs_writeback (input [3:0] op);
     needs_writeback =
