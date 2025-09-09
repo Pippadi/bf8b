@@ -10,7 +10,9 @@ module bf8b
     parameter OP_STORE = 7'b0100011,
     parameter OP_BRANCH = 7'b1100011,
     parameter OP_INTEGER_IMM = 7'b0010011,
-    parameter OP_INTEGER = 7'b0110011
+    parameter OP_INTEGER = 7'b0110011,
+
+    parameter UART_BASE_ADDR = 32'hFFFF0000
 )
 (
     input rst,
@@ -18,7 +20,8 @@ module bf8b
     input [M_WIDTH-1:0] data_in,
     output [M_WIDTH-1:0] data_out,
     output [M_WIDTH-$clog2(M_WIDTH/8)-1:0] addr,
-    output [M_WIDTH/8-1:0] wes
+    output [M_WIDTH/8-1:0] wes,
+    output tx
 );
 
 localparam INST_WIDTH = M_WIDTH;
@@ -207,12 +210,24 @@ writeback #(
     .ready(wb_ready)
 );
 
-wire tx;
+wire [M_WIDTH-1:0] uart_reg_data_in;
+
+wire uart_selected;
+assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) & (exec_mem_addr < UART_BASE_ADDR + 4);
+
 uart UART (
     .rst(rst),
     .clk(clk),
+    .reg_req(uart_selected & exec_mem_req),
+    .reg_we(exec_mem_we),
+    .reg_data_in(exec_data_out),
+    .reg_data_out(uart_reg_data_in),
+    .reg_select(exec_mem_addr[1:0]),
     .tx(tx)
 );
+
+wire [M_WIDTH-1:0] exec_mem_data_in_muxed;
+assign exec_mem_data_in = uart_selected ? uart_reg_data_in : exec_mem_data_in_muxed;
 
 mem_if #(
     .M_WIDTH(M_WIDTH),
@@ -221,13 +236,13 @@ mem_if #(
     .rst(rst),
     .clk(clk),
     .mem_data_in(data_in),
-    .client_requests({exec_mem_req, fetch_mem_req}),
+    .client_requests({~uart_selected & exec_mem_req, fetch_mem_req}),
     .client_addrs_packed({exec_mem_addr, fetch_addr}),
     .client_wes({exec_mem_we, 1'b0}),
     .client_data_widths_packed({exec_mem_acc_width, MEM_ACC_32}),
     .client_data_outs_packed({exec_data_out, {M_WIDTH{1'b0}}}),
     .client_readies({exec_mem_ready, fetch_mem_ready}),
-    .client_data_ins_packed({exec_mem_data_in, fetch_mem_data_in}),
+    .client_data_ins_packed({exec_mem_data_in_muxed, fetch_mem_data_in}),
     .mem_data_out(data_out),
     .mem_addr(addr),
     .mem_we_outs(wes)

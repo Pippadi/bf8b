@@ -16,6 +16,7 @@ reg [31:0] data_out;
 wire [29:0] addr;
 wire [31:0] data_in;
 wire [3:0] wes;
+wire tx;
 
 bf8b #(
     .M_WIDTH(32),
@@ -26,7 +27,8 @@ bf8b #(
     .addr(addr),
     .data_in(data_out),
     .data_out(data_in),
-    .wes(wes)
+    .wes(wes),
+    .tx(tx)
 );
 
 task pulseClk; begin
