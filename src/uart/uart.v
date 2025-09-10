@@ -13,8 +13,8 @@ module uart #(
     input reg_req,
     input reg_we,
     input [M_WIDTH-1:0] reg_data_in,
+    input [1:0] reg_select,
     output reg [M_WIDTH-1:0] reg_data_out,
-    output reg [1:0] reg_select,
     output reg reg_ready,
 
     input [M_WIDTH-1:0] tx_mem_data_in,
@@ -82,11 +82,11 @@ assign tx_mem_width = MEM_ACC_8;
 assign tx_should_req = ~tx_fifo_full & ~tx_mem_req & (tx_ptr == tx_src_stop);
 
 always @ (*) begin
-    general_cfg[TX_DONE_BIT] = (tx_ptr == tx_src_stop);
+    general_cfg[TX_DONE_BIT] = (tx_ptr == tx_src_stop) & general_cfg[TX_EN_BIT] & ~tx_busy;
     tx_mem_req = 0;
     tx_fifo_write_en = 0;
 
-    if (general_cfg[TX_DONE_BIT] & ~general_cfg[TX_DONE_BIT]) begin
+    if (general_cfg[TX_EN_BIT] & ~general_cfg[TX_DONE_BIT]) begin
         case (tx_mem_cycle)
             TX_MEM_WAITING: tx_mem_req = 1;
             TX_MEM_READY: tx_fifo_write_en = 1;
@@ -100,7 +100,6 @@ always @ (posedge clk) begin
         tx_src_start <= 0;
         tx_src_stop <= 0;
         reg_data_out <= 0;
-        reg_select <= 0;
         reg_ready <= 0;
         tx_mem_cycle <= TX_MEM_IDLE;
         tx_ptr <= 0;

@@ -219,7 +219,7 @@ wire [M_WIDTH-1:0] uart_tx_mem_addr;
 wire [1:0] uart_tx_mem_acc_width;
 
 wire uart_selected;
-assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) & (exec_mem_addr < UART_BASE_ADDR + 4);
+assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 'h0C);
 
 uart UART (
     .rst(rst),
