@@ -74,49 +74,60 @@ reg [BANK_SEL_WIDTH-1:0] shift_amt_lo;
 reg [BANK_SEL_WIDTH-1:0] shift_amt_hi;
 
 always @ (*) begin
-    mem_we_outs = 0;
-    mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH];
-    shift_amt_temp = client_addr[BANK_SEL_WIDTH-1:0];
+    if (rst) begin
+        mem_we_outs = 0;
+        mem_addr = 0;
+        mem_data_out = 0;
+        client_data_in = 0;
+        client_ready = 0;
+        hi_data_in = 0;
+        shift_amt_lo = 0;
+        shift_amt_hi = 0;
+    end else begin
+        mem_we_outs = 0;
+        mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH];
+        shift_amt_temp = client_addr[BANK_SEL_WIDTH-1:0];
 
-    case (mem_cycle)
-        MEM_IDLE: if (client_request) begin
-            single_cycle_acc = (client_data_width == MEM_ACC_8)
-            || (client_data_width == MEM_ACC_16 && shift_amt_lo != 3)
-            || (client_data_width == MEM_ACC_32 && shift_amt_lo == 0);
-            shift_amt_lo = shift_amt_temp;
-            shift_amt_hi = ~shift_amt_lo + 1;
-            client_data_in = 0;
-            client_ready = 0;
-        end
+        case (mem_cycle)
+            MEM_IDLE: if (client_request) begin
+                single_cycle_acc = (client_data_width == MEM_ACC_8)
+                || (client_data_width == MEM_ACC_16 && shift_amt_lo != 3)
+                || (client_data_width == MEM_ACC_32 && shift_amt_lo == 0);
+                shift_amt_lo = shift_amt_temp;
+                shift_amt_hi = ~shift_amt_lo + 1;
+                client_data_in = 0;
+                client_ready = 0;
+            end
 
-        MEM_ACC_H_1, MEM_ACC_H_2: begin
-            mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH] + 1;
-            hi_data_in = mem_data_in << (8*shift_amt_hi);
-            mem_data_out = client_data_out >> (8*shift_amt_hi);
-            client_data_in = 0;
-            client_ready = 0;
+            MEM_ACC_H_1, MEM_ACC_H_2: begin
+                mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH] + 1;
+                hi_data_in = mem_data_in << (8*shift_amt_hi);
+                mem_data_out = client_data_out >> (8*shift_amt_hi);
+                client_data_in = 0;
+                client_ready = 0;
 
-            case (client_data_width)
-                MEM_ACC_16: mem_we_outs = {2{client_we}} >> shift_amt_hi;
-                MEM_ACC_32: mem_we_outs = {4{client_we}} >> shift_amt_hi;
-            endcase
-        end
+                case (client_data_width)
+                    MEM_ACC_16: mem_we_outs = {2{client_we}} >> shift_amt_hi;
+                    MEM_ACC_32: mem_we_outs = {4{client_we}} >> shift_amt_hi;
+                endcase
+            end
 
-        MEM_ACC_L_1, MEM_ACC_L_2: begin
-            client_data_in = hi_data_in | (mem_data_in >> (8*shift_amt_lo));
-            mem_data_out = client_data_out << (8*shift_amt_lo);
+            MEM_ACC_L_1, MEM_ACC_L_2: begin
+                client_data_in = hi_data_in | (mem_data_in >> (8*shift_amt_lo));
+                mem_data_out = client_data_out << (8*shift_amt_lo);
 
-            case (client_data_width)
-                MEM_ACC_8: mem_we_outs = client_we << shift_amt_lo;
-                MEM_ACC_16: mem_we_outs = {2{client_we}} << shift_amt_lo;
-                MEM_ACC_32: mem_we_outs = {4{client_we}} << shift_amt_lo;
-            endcase
+                case (client_data_width)
+                    MEM_ACC_8: mem_we_outs = client_we << shift_amt_lo;
+                    MEM_ACC_16: mem_we_outs = {2{client_we}} << shift_amt_lo;
+                    MEM_ACC_32: mem_we_outs = {4{client_we}} << shift_amt_lo;
+                endcase
 
-            client_ready = mem_cycle == MEM_ACC_L_2;
-        end
+                client_ready = mem_cycle == MEM_ACC_L_2;
+            end
 
-        MEM_READY: client_ready = client_request;
-    endcase
+            MEM_READY: client_ready = client_request;
+        endcase
+    end
 end
 
 always @ (posedge clk) begin

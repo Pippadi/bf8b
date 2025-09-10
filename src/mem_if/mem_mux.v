@@ -37,40 +37,51 @@ reg [1:0] cycle;
 integer i;
 
 always @ (*) begin
-    mem_mux_holder_temp = 0;
-    for (i = 0; i < CLIENT_CNT; i = i + 1) begin
-        client_addrs[i] = client_addrs_packed[M_WIDTH * i +: M_WIDTH];
-        client_data_outs[i] = client_data_outs_packed[M_WIDTH * i +: M_WIDTH];
-        client_data_widths[i] = client_data_widths_packed[2*i +: 2];
-        client_data_ins_packed[M_WIDTH * i +: M_WIDTH] = client_data_ins[i];
+    if (rst) begin
+        mem_request = 0;
+        mem_data_out = 0;
+        mem_addr = 0;
+        mem_data_width = 0;
+        mem_we_out = 0;
+        client_data_ins_packed = 0;
+        client_readies = 0;
+        mem_mux_holder_temp = 0;
+    end else begin
+        mem_mux_holder_temp = 0;
+        for (i = 0; i < CLIENT_CNT; i = i + 1) begin
+            client_addrs[i] = client_addrs_packed[M_WIDTH * i +: M_WIDTH];
+            client_data_outs[i] = client_data_outs_packed[M_WIDTH * i +: M_WIDTH];
+            client_data_widths[i] = client_data_widths_packed[2*i +: 2];
+            client_data_ins_packed[M_WIDTH * i +: M_WIDTH] = client_data_ins[i];
 
-        if (client_requests[i])
-            mem_mux_holder_temp = i;
-    end
-
-    mem_request = 0;
-    mem_data_out = client_data_outs[mem_mux_holder];
-    mem_addr = client_addrs[mem_mux_holder];
-    mem_data_width = client_data_widths[mem_mux_holder];
-    mem_we_out = client_wes[mem_mux_holder];
-    client_readies[mem_mux_holder] = mem_ready;
-    client_data_ins[mem_mux_holder] = mem_data_in;
-
-    case (cycle)
-        0: begin
-            if (client_requests) begin
-                mem_data_out = client_data_outs[mem_mux_holder_temp];
-                mem_addr = client_addrs[mem_mux_holder_temp];
-                mem_data_width = client_data_widths[mem_mux_holder_temp];
-                mem_we_out = client_wes[mem_mux_holder_temp];
-                mem_request = 1;
-            end
+            if (client_requests[i])
+                mem_mux_holder_temp = i;
         end
 
-        1: mem_request = 1;
+        mem_request = 0;
+        mem_data_out = client_data_outs[mem_mux_holder];
+        mem_addr = client_addrs[mem_mux_holder];
+        mem_data_width = client_data_widths[mem_mux_holder];
+        mem_we_out = client_wes[mem_mux_holder];
+        client_readies[mem_mux_holder] = mem_ready;
+        client_data_ins[mem_mux_holder] = mem_data_in;
 
-        2: mem_request = client_requests[mem_mux_holder];
-    endcase
+        case (cycle)
+            0: begin
+                if (client_requests) begin
+                    mem_data_out = client_data_outs[mem_mux_holder_temp];
+                    mem_addr = client_addrs[mem_mux_holder_temp];
+                    mem_data_width = client_data_widths[mem_mux_holder_temp];
+                    mem_we_out = client_wes[mem_mux_holder_temp];
+                    mem_request = 1;
+                end
+            end
+
+            1: mem_request = 1;
+
+            2: mem_request = client_requests[mem_mux_holder];
+        endcase
+    end
 end
 
 always @ (posedge clk) begin

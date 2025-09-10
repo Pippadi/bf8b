@@ -103,6 +103,7 @@ always @ (posedge clk) begin
         reg_select <= 0;
         reg_ready <= 0;
         tx_mem_cycle <= TX_MEM_IDLE;
+        tx_ptr <= 0;
     end else begin
         reg_ready <= reg_req;
         if (reg_req) begin
