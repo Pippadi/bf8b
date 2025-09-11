@@ -88,10 +88,13 @@ adder #(
     .out(aux_adder_out)
 );
 
+reg [M_WIDTH-1:0] val_temp;
+reg cycle;
+
 always @ (*) begin
     flush_pipeline = 0;
     alu_modifier = 0;
-    val_out = alu_out;
+    val_temp = alu_out;
     alu_in1 = 0;
     alu_in2 = 0;
     alu_funct3 = F3_ADD;
@@ -102,27 +105,20 @@ always @ (*) begin
     mem_acc_width = funct3[1:0];
     aux_adder_in1 = imm;
     aux_adder_in2 = rs1;
-    ready = cycle != 0; // When cycle isn't 0 but enable is, signal resetting
+    ready = cycle == 1;
 
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin
-            ready = cycle == 2;
-            case (cycle)
-                0, 1: begin
-                    mem_addr = aux_adder_out;
-                    mem_we = op == OP_STORE;
-                    mem_data_out = rs2;
-                    mem_req = 1;
-                end
-
-                2: begin
-                    mem_req = 0;
-                    val_out = mem_data_in;
-                end
-            endcase
+            if (cycle == 0) begin
+                mem_addr = aux_adder_out;
+                mem_we = op == OP_STORE;
+                mem_data_out = rs2;
+                mem_req = 1;
+                val_temp = mem_data_in;
+            end else
+                mem_req = 0;
         end
         else begin
-            ready = cycle == 1;
             case (op)
                 OP_LUI: begin
                     alu_in1 = imm;
@@ -196,18 +192,17 @@ always @ (*) begin
     end
 end
 
-reg [1:0] cycle;
-
 always @ (posedge clk) begin
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin
-            if (cycle == 0)
+            if (cycle == 0 && mem_ready) begin
                 cycle <= 1;
-
-            if (cycle == 1 && mem_ready)
-                cycle <= 2;
-        end else
+                val_out <= val_temp; // Latch value here, because garbage may be on mem_data_in next cycle
+            end
+        end else begin
+            val_out <= val_temp;
             cycle <= 1;
+        end
     end else
         cycle <= 0;
 end
