@@ -33,8 +33,18 @@ reg [1:0] client_data_widths [0:CLIENT_CNT-1];
 reg [$clog2(CLIENT_CNT)-1:0] mem_mux_holder;
 reg [$clog2(CLIENT_CNT)-1:0] mem_mux_holder_temp;
 
+genvar i;
+generate
+    for (i = 0; i < CLIENT_CNT; i = i + 1) begin
+        assign client_addrs[i] = client_addrs_packed[M_WIDTH * i +: M_WIDTH];
+        assign client_data_outs[i] = client_data_outs_packed[M_WIDTH * i +: M_WIDTH];
+        assign client_data_widths[i] = client_data_widths_packed[2*i +: 2];
+        assign client_data_ins_packed[M_WIDTH * i +: M_WIDTH] = client_data_ins[i];
+    end
+endgenerate
+
 reg [1:0] cycle;
-integer i;
+integer j;
 
 always @ (*) begin
     if (rst) begin
@@ -43,19 +53,13 @@ always @ (*) begin
         mem_addr = 0;
         mem_data_width = 0;
         mem_we_out = 0;
-        client_data_ins_packed = 0;
         client_readies = 0;
         mem_mux_holder_temp = 0;
     end else begin
         mem_mux_holder_temp = 0;
-        for (i = 0; i < CLIENT_CNT; i = i + 1) begin
-            client_addrs[i] = client_addrs_packed[M_WIDTH * i +: M_WIDTH];
-            client_data_outs[i] = client_data_outs_packed[M_WIDTH * i +: M_WIDTH];
-            client_data_widths[i] = client_data_widths_packed[2*i +: 2];
-            client_data_ins_packed[M_WIDTH * i +: M_WIDTH] = client_data_ins[i];
-
-            if (client_requests[i])
-                mem_mux_holder_temp = i;
+        for (j = 0; j < CLIENT_CNT; j = j + 1) begin
+            if (client_requests[j])
+                mem_mux_holder_temp = j;
         end
 
         mem_request = 0;

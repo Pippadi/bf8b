@@ -206,12 +206,8 @@ always @ (posedge clk) begin
 
             if (cycle == 1 && mem_ready)
                 cycle <= 2;
-        end
-
-        else begin
-            if (cycle == 0)
-                cycle <= 1;
-        end
+        end else
+            cycle <= 1;
     end else
         cycle <= 0;
 end

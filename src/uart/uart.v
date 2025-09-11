@@ -79,7 +79,7 @@ fifo #(
 
 assign tx_mem_addr = tx_ptr;
 assign tx_mem_width = MEM_ACC_8;
-assign tx_should_req = ~tx_fifo_full & ~tx_mem_req & (tx_ptr == tx_src_stop);
+assign tx_should_req = ~tx_fifo_full & (tx_mem_cycle == TX_MEM_IDLE) & (tx_ptr != tx_src_stop);
 
 always @ (*) begin
     general_cfg[TX_DONE_BIT] = (tx_ptr == tx_src_stop) & general_cfg[TX_EN_BIT] & ~tx_busy;
