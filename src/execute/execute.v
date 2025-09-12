@@ -3,7 +3,7 @@ module exec
     parameter M_WIDTH = 8,
     parameter OP_WIDTH = 7,
     parameter OP_LUI = 7'b0110111,
-    parameter OP_AIUPC = 7'b0010111,
+    parameter OP_AUIPC = 7'b0010111,
     parameter OP_JAL = 7'b1101111,
     parameter OP_JALR = 7'b1100111,
     parameter OP_LOAD = 7'b0000011,
@@ -124,7 +124,7 @@ always @ (*) begin
                     alu_in1 = imm;
                     alu_in2 = 0;
                 end
-                OP_AIUPC: begin
+                OP_AUIPC: begin
                     alu_in1 = imm;
                     alu_in2 = pc_in;
                 end

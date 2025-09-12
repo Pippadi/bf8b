@@ -5,7 +5,7 @@ module decode
     parameter REG_ADDR_WIDTH = 4,
     parameter INST_WIDTH = 16,
     parameter OP_LUI = 7'b0110111,
-    parameter OP_AIUPC = 7'b0010111,
+    parameter OP_AUIPC = 7'b0010111,
     parameter OP_JAL = 7'b1101111,
     parameter OP_JALR = 7'b1100111,
     parameter OP_LOAD = 7'b0000011,
@@ -45,7 +45,7 @@ always @ (*) begin
     immj = {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
 
     case (op)
-        OP_LUI, OP_AIUPC:
+        OP_LUI, OP_AUIPC:
             imm = immu;
         OP_JAL:
             imm = immj;

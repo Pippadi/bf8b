@@ -4,7 +4,7 @@ module writeback
     parameter REG_CNT = 16,
     parameter REG_ADDR_WIDTH = 4,
     parameter OP_LUI = 7'b0110111,
-    parameter OP_AIUPC = 7'b0010111,
+    parameter OP_AUIPC = 7'b0010111,
     parameter OP_JAL = 7'b1101111,
     parameter OP_JALR = 7'b1100111,
     parameter OP_LOAD = 7'b0000011,
@@ -39,7 +39,7 @@ endgenerate
 wire needs_writeback;
 assign needs_writeback =
     (op == OP_LUI) ||
-    (op == OP_AIUPC) ||
+    (op == OP_AUIPC) ||
     (op == OP_JAL) ||
     (op == OP_JALR) ||
     (op == OP_INTEGER_IMM) ||
@@ -50,7 +50,8 @@ assign needs_writeback =
 always @ (posedge clk) begin
     if (en && needs_writeback && reg_addr != 0) begin
         casez ({op, funct3[1:0]})
-            {OP_LUI, 2'b??}: reg_file[reg_addr][31:12] <= val[31:12]; // LUI only writes upper 20 bits
+            {OP_LUI, 2'b??}: reg_file[reg_addr][31:12] <= val[31:12];
+            {OP_AUIPC, 2'b??}: reg_file[reg_addr][31:12] <= val[31:12];
             {OP_LOAD, MEM_ACC_8}: reg_file[reg_addr] <= {{24{~funct3[2] & val[7]}}, val[7:0]};
             {OP_LOAD, MEM_ACC_16}: reg_file[reg_addr] <= {{16{~funct3[2] & val[15]}}, val[15:0]};
             default: reg_file[reg_addr] <= val;
