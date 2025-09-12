@@ -348,17 +348,21 @@ always @ (*) begin
         wb_funct3_next = exec_funct3;
         wb_reg_addr_next = exec_wb_addr;
         wb_val_next = exec_val_out;
+        wb_en_next = 1;
         exec_en_next = 0;
         if (exec_flush_pipeline) begin
             pc_next = exec_pc_out;
             fetch_en_next = 0;
             decode_en_next = 0;
-        end else
-            wb_en_next = 1;
+            exec_en_next = 1; // Keep execute in STATE_COMPLETE to stall and retain values
+        end
     end
 
-    if (wb_state == STATE_COMPLETE)
+    if (wb_state == STATE_COMPLETE) begin
         wb_en_next = 0;
+        if (exec_flush_pipeline)
+            exec_en_next = 0; // Un-stall execute
+    end
 end
 
 always @ (posedge clk) begin
