@@ -17,7 +17,7 @@ module mem_mux
     input [CLIENT_CNT*M_WIDTH-1:0] client_data_outs_packed,
     input mem_ready,
     output reg mem_request,
-    output reg [M_WIDTH*CLIENT_CNT-1:0] client_data_ins_packed,
+    output wire [M_WIDTH*CLIENT_CNT-1:0] client_data_ins_packed,
     output reg [CLIENT_CNT-1:0] client_readies,
     output reg [M_WIDTH-1:0] mem_data_out,
     output reg [M_WIDTH-1:0] mem_addr,
@@ -25,10 +25,10 @@ module mem_mux
     output reg mem_we_out
 );
 
-reg [M_WIDTH-1:0] client_addrs [0:CLIENT_CNT-1];
-reg [M_WIDTH-1:0] client_data_outs [0:CLIENT_CNT-1];
+wire [M_WIDTH-1:0] client_addrs [0:CLIENT_CNT-1];
+wire [M_WIDTH-1:0] client_data_outs [0:CLIENT_CNT-1];
+wire [1:0] client_data_widths [0:CLIENT_CNT-1];
 reg [M_WIDTH-1:0] client_data_ins [0:CLIENT_CNT-1];
-reg [1:0] client_data_widths [0:CLIENT_CNT-1];
 
 reg [$clog2(CLIENT_CNT)-1:0] mem_mux_holder;
 reg [$clog2(CLIENT_CNT)-1:0] mem_mux_holder_temp;

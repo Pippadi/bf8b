@@ -22,7 +22,7 @@ module writeback
     input [2:0] funct3,
     input [REG_ADDR_WIDTH-1:0] reg_addr,
     input [M_WIDTH-1:0] val,
-    output reg [M_WIDTH*REG_CNT-1:0] regs,
+    output wire [M_WIDTH*REG_CNT-1:0] regs,
     output reg ready
 );
 
