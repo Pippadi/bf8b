@@ -35,7 +35,7 @@ localparam TX_DONE_BIT = 3;
 
 localparam GENERAL_CFG_WRITE_MASK = 32'hFFFF_FFFF ^ (1 << TX_DONE_BIT);
 
-reg [M_WIDTH-1:0] general_cfg;
+wire [M_WIDTH-1:0] general_cfg;
 reg [M_WIDTH-1:0] tx_src_start;
 reg [M_WIDTH-1:0] tx_src_stop;
 
@@ -46,6 +46,7 @@ localparam TX_MEM_IDLE = 0;
 localparam TX_MEM_WAITING = 1;
 localparam TX_MEM_READY = 2;
 
+reg tx_en;
 wire [7:0] tx_data;
 wire tx_fifo_full;
 wire tx_fifo_empty;
@@ -81,8 +82,9 @@ assign tx_mem_addr = tx_ptr;
 assign tx_mem_width = MEM_ACC_8;
 assign tx_should_req = ~tx_fifo_full & (tx_mem_cycle == TX_MEM_IDLE) & (tx_ptr != tx_src_stop);
 
+assign general_cfg = 0 | (tx_en << TX_EN_BIT) | ((tx_en & (tx_ptr == tx_src_stop) & ~tx_busy) << TX_DONE_BIT);
+
 always @ (*) begin
-    general_cfg[TX_DONE_BIT] = (tx_ptr == tx_src_stop) & general_cfg[TX_EN_BIT] & ~tx_busy;
     tx_mem_req = 0;
     tx_fifo_write_en = 0;
 
@@ -96,7 +98,7 @@ end
 
 always @ (posedge clk) begin
     if (rst) begin
-        general_cfg <= 0;
+        tx_en <= 0;
         tx_src_start <= 0;
         tx_src_stop <= 0;
         reg_data_out <= 0;
@@ -110,7 +112,7 @@ always @ (posedge clk) begin
                 GENERAL_CFG_ADDR: begin
                     reg_data_out <= general_cfg;
                     if (reg_we)
-                        general_cfg <= reg_data_in & GENERAL_CFG_WRITE_MASK;
+                        tx_en <= reg_data_in[TX_EN_BIT];
                 end
                 TX_SRC_START_ADDR: begin
                     reg_data_out <= tx_src_start;
