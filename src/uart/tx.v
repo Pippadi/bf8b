@@ -5,6 +5,7 @@ module tx
 ) (
     input rst,
     input clk,
+    input tx_clk_posedge,
     input data_available,
     input [7:0] data,
     output reg req,
@@ -12,43 +13,23 @@ module tx
     output wire busy
 );
 
-reg tx_clk;
 reg [9:0] tx_byte_buf;
 reg [3:0] bit_cnt;
 reg data_read;
 
-reg [$clog2(CLK_FREQ/(BAUD_RATE*2)):0] ctr;
-
-reg tx_clk_prev;
-
 always @ (posedge clk) begin
     if (rst) begin
-        ctr <= 0;
-        tx_clk <= 0;
-        tx_clk_prev <= 0;
         bit_cnt <= 0;
         data_read <= 0;
         tx_byte_buf <= 10'b0;
     end else begin
-        tx_clk_prev <= tx_clk;
-
-        if (ctr == (CLK_FREQ / BAUD_RATE) - 1) begin
-            ctr <= 0;
-            tx_clk <= 0;
-        end else
-            ctr <= ctr + 1;
-
-        if (ctr == CLK_FREQ / (2*BAUD_RATE))
-            tx_clk <= 1;
-
         if (data_available & ~busy & ~data_read) begin
             req <= 1;
             data_read <= 1;
         end else
             req <= 0;
 
-        // Positive edge of tx_clk
-        if (~tx_clk_prev & tx_clk) begin
+        if (tx_clk_posedge) begin
             // Possible race condition? Should be fine since data_read is only
             // set when not busy. Hopefully one cycle is enough for data to be valid.
             if (bit_cnt == 0 && data_read) begin

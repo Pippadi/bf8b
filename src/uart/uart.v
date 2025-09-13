@@ -1,6 +1,6 @@
 module uart #(
     parameter M_WIDTH = 32,
-    parameter CLOCK_FREQUENCY = 50000000,
+    parameter CLK_FREQ = 50000000,
     parameter BAUD_RATE = 115200,
 
     parameter MEM_ACC_8 = 2'b00,
@@ -33,11 +33,20 @@ localparam TX_SRC_STOP_ADDR = 2'b10;
 localparam TX_EN_BIT = 1;
 localparam TX_DONE_BIT = 3;
 
-localparam GENERAL_CFG_WRITE_MASK = 32'hFFFF_FFFF ^ (1 << TX_DONE_BIT);
-
 wire [M_WIDTH-1:0] general_cfg;
 reg [M_WIDTH-1:0] tx_src_start;
 reg [M_WIDTH-1:0] tx_src_stop;
+
+wire tx_clk_posedge;
+
+clockgen #(
+    .CLK_FREQ(CLK_FREQ),
+    .BAUD_RATE(BAUD_RATE)
+) ClkGen (
+    .rst(rst),
+    .clk(clk),
+    .tx_clk_posedge(tx_clk_posedge)
+);
 
 reg [M_WIDTH-1:0] tx_ptr;
 reg [1:0] tx_mem_cycle;
@@ -57,6 +66,7 @@ wire tx_busy;
 tx TX (
     .rst(rst),
     .clk(clk),
+    .tx_clk_posedge(tx_clk_posedge),
     .data(tx_data),
     .data_available(~tx_fifo_empty),
     .busy(tx_busy),
