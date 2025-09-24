@@ -1,8 +1,5 @@
-module tx
-#(
-    parameter CLK_FREQ = 50_000_000,
-    parameter BAUD_RATE = 115200
-) (
+module tx_serializer
+(
     input rst,
     input clk,
     input tx_clk_posedge,

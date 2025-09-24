@@ -17,6 +17,7 @@ wire [29:0] addr;
 wire [31:0] data_in;
 wire [3:0] wes;
 wire tx;
+wire rx;
 
 bf8b #(
     .M_WIDTH(32),
@@ -28,7 +29,8 @@ bf8b #(
     .data_in(data_out),
     .data_out(data_in),
     .wes(wes),
-    .tx(tx)
+    .tx(tx),
+    .rx(rx)
 );
 
 task pulseClk; begin
@@ -81,6 +83,8 @@ initial begin
         end
     join
 end
+
+assign rx = 1'b1;
 
 always @(posedge clk) begin
     if (wes[0])

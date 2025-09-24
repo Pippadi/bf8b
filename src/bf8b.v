@@ -17,6 +17,7 @@ module bf8b
 (
     input rst,
     input clk,
+    input rx,
     input [M_WIDTH-1:0] data_in,
     output [M_WIDTH-1:0] data_out,
     output [M_WIDTH-$clog2(M_WIDTH/8)-1:0] addr,
@@ -238,6 +239,7 @@ uart UART (
     .tx_mem_addr(uart_tx_mem_addr),
     .tx_mem_width(uart_tx_mem_acc_width),
 
+    .rx(rx),
     .tx(tx)
 );
 

@@ -23,6 +23,7 @@ module uart #(
     output wire [M_WIDTH-1:0] tx_mem_addr,
     output wire [1:0] tx_mem_width,
 
+    input rx,
     output wire tx
 );
 
@@ -38,6 +39,7 @@ reg [M_WIDTH-1:0] tx_src_start;
 reg [M_WIDTH-1:0] tx_src_stop;
 
 wire tx_clk_posedge;
+wire rx_clk_posedge;
 
 clockgen #(
     .CLK_FREQ(CLK_FREQ),
@@ -46,6 +48,17 @@ clockgen #(
     .rst(rst),
     .clk(clk),
     .tx_clk_posedge(tx_clk_posedge)
+);
+
+wire [7:0] rx_data;
+rx_deserializer #(
+    .RX_CLKS_PER_BIT(CLK_FREQ / BAUD_RATE)
+) RX_DESER (
+    .rst(rst),
+    .clk(clk),
+    .rx(rx),
+    .rx_clk_posedge(rx_clk_posedge),
+    .data(rx_data)
 );
 
 reg [M_WIDTH-1:0] tx_ptr;
@@ -63,7 +76,7 @@ reg tx_fifo_write_en;
 wire tx_phy_data_req;
 wire tx_busy;
 
-tx TX (
+tx_serializer TX_SER (
     .rst(rst),
     .clk(clk),
     .tx_clk_posedge(tx_clk_posedge),
