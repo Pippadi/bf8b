@@ -54,6 +54,7 @@ always @ (posedge clk) begin
             end
         end
 
+        // Possible hold time violation here
         if (bit_idx == 9 && !data_latched) begin
             latch_data <= 1'b1;
             data_latched <= 1'b1;

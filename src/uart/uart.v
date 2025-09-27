@@ -34,6 +34,8 @@ localparam TX_SRC_STOP_ADDR = 2'b10;
 localparam TX_EN_BIT = 1;
 localparam TX_DONE_BIT = 3;
 
+localparam RX_CLKS_PER_BIT = 8;
+
 wire [M_WIDTH-1:0] general_cfg;
 reg [M_WIDTH-1:0] tx_src_start;
 reg [M_WIDTH-1:0] tx_src_stop;
@@ -43,17 +45,19 @@ wire rx_clk_posedge;
 
 clockgen #(
     .CLK_FREQ(CLK_FREQ),
-    .BAUD_RATE(BAUD_RATE)
+    .BAUD_RATE(BAUD_RATE),
+    .RX_CLKS_PER_BIT(RX_CLKS_PER_BIT)
 ) ClkGen (
     .rst(rst),
-    .clk(clk),
-    .tx_clk_posedge(tx_clk_posedge)
+    .main_clk(clk),
+    .tx_clk_posedge(tx_clk_posedge),
+    .rx_clk_posedge(rx_clk_posedge)
 );
 
 wire [7:0] rx_data;
 rx_deserializer #(
-    .RX_CLKS_PER_BIT(CLK_FREQ / BAUD_RATE)
-) RX_DESER (
+    .RX_CLKS_PER_BIT(RX_CLKS_PER_BIT)
+) RX_Deser (
     .rst(rst),
     .clk(clk),
     .rx(rx),
@@ -76,7 +80,7 @@ reg tx_fifo_write_en;
 wire tx_phy_data_req;
 wire tx_busy;
 
-tx_serializer TX_SER (
+tx_serializer TX_Ser (
     .rst(rst),
     .clk(clk),
     .tx_clk_posedge(tx_clk_posedge),
