@@ -213,11 +213,19 @@ writeback #(
 
 wire [M_WIDTH-1:0] uart_reg_data_in;
 wire uart_reg_ready;
+
 wire [M_WIDTH-1:0] uart_tx_mem_data_in;
 wire uart_tx_mem_ready;
 wire uart_tx_mem_req;
 wire [M_WIDTH-1:0] uart_tx_mem_addr;
 wire [1:0] uart_tx_mem_acc_width;
+
+wire uart_rx_mem_req;
+wire [1:0] uart_rx_mem_acc_width;
+wire [M_WIDTH-1:0] uart_rx_mem_addr;
+wire [M_WIDTH-1:0] uart_rx_mem_data_in; // throwaway
+wire [M_WIDTH-1:0] uart_rx_mem_data_out;
+wire uart_rx_mem_ready;
 
 wire uart_selected;
 assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 'h0C);
@@ -233,11 +241,17 @@ uart UART (
     .reg_select(exec_mem_addr[3:2]), // 4 registers aligned to 4 bytes
     .reg_ready(uart_reg_ready),
 
-    .tx_mem_data_in(uart_tx_mem_data_in),
-    .tx_mem_ready(uart_tx_mem_ready),
     .tx_mem_req(uart_tx_mem_req),
-    .tx_mem_addr(uart_tx_mem_addr),
     .tx_mem_width(uart_tx_mem_acc_width),
+    .tx_mem_data_in(uart_tx_mem_data_in),
+    .tx_mem_addr(uart_tx_mem_addr),
+    .tx_mem_ready(uart_tx_mem_ready),
+
+    .rx_mem_req(uart_rx_mem_req),
+    .rx_mem_width(uart_rx_mem_acc_width),
+    .rx_mem_addr(uart_rx_mem_addr),
+    .rx_mem_data_out(uart_rx_mem_data_out),
+    .rx_mem_ready(uart_rx_mem_ready),
 
     .rx(rx),
     .tx(tx)
@@ -250,18 +264,18 @@ assign exec_mem_ready = uart_selected ? uart_reg_ready : exec_mem_ready_muxed;
 
 mem_if #(
     .M_WIDTH(M_WIDTH),
-    .CLIENT_CNT(3)
+    .CLIENT_CNT(4)
 ) MemoryInterface (
     .rst(rst),
     .clk(clk),
     .mem_data_in(data_in),
-    .client_requests({~uart_selected & exec_mem_req, fetch_mem_req, uart_tx_mem_req}),
-    .client_addrs_packed({exec_mem_addr, fetch_addr, uart_tx_mem_addr}),
-    .client_wes({exec_mem_we, 1'b0, 1'b0}),
-    .client_data_widths_packed({exec_mem_acc_width, MEM_ACC_32, uart_tx_mem_acc_width}),
-    .client_data_outs_packed({exec_data_out, {M_WIDTH{1'b0}}, {M_WIDTH{1'b0}}}),
-    .client_readies({exec_mem_ready_muxed, fetch_mem_ready, uart_tx_mem_ready}),
-    .client_data_ins_packed({exec_mem_data_in_muxed, fetch_mem_data_in, uart_tx_mem_data_in}),
+    .client_requests({~uart_selected & exec_mem_req, fetch_mem_req, uart_rx_mem_req, uart_tx_mem_req}),
+    .client_addrs_packed({exec_mem_addr, fetch_addr, uart_rx_mem_addr, uart_tx_mem_addr}),
+    .client_wes({exec_mem_we, 1'b0, 1'b1, 1'b0}),
+    .client_data_widths_packed({exec_mem_acc_width, MEM_ACC_32, uart_rx_mem_acc_width, uart_tx_mem_acc_width}),
+    .client_data_outs_packed({exec_data_out, {M_WIDTH{1'b0}}, uart_rx_mem_data_out, {M_WIDTH{1'b0}}}),
+    .client_readies({exec_mem_ready_muxed, fetch_mem_ready, uart_rx_mem_ready, uart_tx_mem_ready}),
+    .client_data_ins_packed({exec_mem_data_in_muxed, fetch_mem_data_in, uart_rx_mem_data_in, uart_tx_mem_data_in}),
     .mem_data_out(data_out),
     .mem_addr(addr),
     .mem_we_outs(wes)

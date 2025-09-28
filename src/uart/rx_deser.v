@@ -6,7 +6,7 @@ module rx_deserializer
     input rst,
     input clk,
     input rx,
-    input rx_clk_posedge,
+    input deser_clk_posedge,
     output reg [7:0] data,
     output reg latch_data
 );
@@ -34,7 +34,7 @@ always @ (posedge clk) begin
             data_latched <= 'b0;
         end
 
-        if (rx_clk_posedge & line_active) begin
+        if (deser_clk_posedge & line_active) begin
             if (bit_idx == 9) begin
                 line_active <= 'b0;
                 clk_count <= 'b0;
@@ -54,7 +54,6 @@ always @ (posedge clk) begin
             end
         end
 
-        // Possible hold time violation here
         if (bit_idx == 9 && !data_latched) begin
             latch_data <= 1'b1;
             data_latched <= 1'b1;

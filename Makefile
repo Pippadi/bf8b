@@ -19,6 +19,7 @@ SRCS += $(SRC_DIR)/mem_if/mem_if.v
 SRCS += $(SRC_DIR)/uart/clockgen.v
 SRCS += $(SRC_DIR)/uart/tx_manager.v
 SRCS += $(SRC_DIR)/uart/tx_ser.v
+SRCS += $(SRC_DIR)/uart/rx_manager.v
 SRCS += $(SRC_DIR)/uart/rx_deser.v
 SRCS += $(SRC_DIR)/uart/fifo.v
 SRCS += $(SRC_DIR)/uart/uart.v
