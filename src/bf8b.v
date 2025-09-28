@@ -238,7 +238,7 @@ uart UART (
     .reg_we(exec_mem_we),
     .reg_data_in(exec_data_out),
     .reg_data_out(uart_reg_data_in),
-    .reg_select(exec_mem_addr[3:2]), // 4 registers aligned to 4 bytes
+    .reg_select(exec_mem_addr[4:2]), // 4 registers aligned to 4 bytes
     .reg_ready(uart_reg_ready),
 
     .tx_mem_req(uart_tx_mem_req),

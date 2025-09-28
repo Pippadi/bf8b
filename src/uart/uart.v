@@ -24,7 +24,7 @@ module uart #(
     output wire [1:0] tx_mem_width,
 
     input rx_mem_ready,
-    output reg rx_mem_req,
+    output wire rx_mem_req,
     output wire [M_WIDTH-1:0] rx_mem_addr,
     output wire [1:0] rx_mem_width,
     output wire [M_WIDTH-1:0] rx_mem_data_out,
