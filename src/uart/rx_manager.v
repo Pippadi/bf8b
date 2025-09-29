@@ -22,9 +22,9 @@ module rx_manager
     output reg mem_req,
     output wire [M_WIDTH-1:0] mem_addr,
     output wire [1:0] mem_width,
-    output wire [M_WIDTH-1:0] mem_data_in,
+    output wire [M_WIDTH-1:0] mem_data_out,
 
-    output wire rx
+    input rx
 );
 
 reg [1:0] mem_cycle;

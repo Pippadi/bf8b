@@ -10,7 +10,7 @@ module clockgen
     output rx_clk_posedge
 );
 
-reg [$clog2(CLK_FREQ*RX_CLKS_PER_BIT*2/BAUD_RATE)-1:0] rx_clk_ctr;
+reg [$clog2(CLK_FREQ/(RX_CLKS_PER_BIT*BAUD_RATE))-1:0] rx_clk_ctr;
 reg [$clog2(RX_CLKS_PER_BIT)-1:0] tx_clk_ctr;
 reg tx_clk, tx_clk_prev;
 reg rx_clk, rx_clk_prev;
