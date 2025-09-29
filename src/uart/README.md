@@ -1,10 +1,39 @@
 # UART controller
 
 Right now, this UART controller supports only 8N1 (8 data bits, no parity, 1 stop bit) configuration.
-Baud rate is configurable via parameters (on the fly configuration coming soon).
 It supports memory-mapped I/O for configuration and status monitoring, and DMA for nonblocking data transfer.
+Baud rate is configurable via parameters (on the fly configuration coming soon).
+
+Memory accesses are hardcoded to 8-bit width for simplicity.
+Given how low UART speeds are, utilizing the full 32-bit memory bus is more trouble than it's worth.
+UART data is buffered in FIFOs in the TX and RX paths to handle bursts of data.
 
 ## Modules
+
+### [`fifo`](./fifo.v)
+
+This is a simple FIFO module used for buffering data in the TX and RX paths.
+This should be moved elsewhere later.
+
+#### Parameters
+
+| Parameter Name | Description | Default Value |
+|----------------|-------------|---------------|
+| `DATA_WIDTH`  | Width of the data bus | `8`           |
+| `FIFO_DEPTH`  | Depth of the FIFO (number of entries) | `16`          |
+
+#### Ports
+
+| Port Name | Direction | Width | Description |
+|-----------|-----------|-------|-------------|
+| `clk`       | input     | 1     | Main clock signal |
+| `rst`       | input     | 1     | Reset signal (active high) |
+| `write_en` | input     | 1     | Write enable signal |
+| `read_en`  | input     | 1     | Read enable signal |
+| `data_in`  | input     | `DATA_WIDTH` | Data input to be written to FIFO |
+| `data_out` | output    | `DATA_WIDTH` | Data output from FIFO |
+| `full`     | output    | 1     | High when FIFO is full |
+| `empty`    | output    | 1     | High when FIFO is empty |
 
 ### [`tx_serializer`](./tx_ser.v)
 
