@@ -34,8 +34,8 @@ module uart #(
 );
 
 localparam GENERAL_CFG_ADDR = 3'b000;
-localparam TX_SRC_START_ADDR = 3'b001;
-localparam TX_SRC_STOP_ADDR = 3'b010;
+localparam TX_DMA_BUF_START_ADDR = 3'b001;
+localparam TX_DMA_BUF_END_ADDR = 3'b010;
 localparam RX_DMA_BUF_START_ADDR = 3'b011;
 localparam RX_DMA_BUF_END_ADDR = 3'b100;
 localparam RX_DMA_BUF_PTR_ADDR = 3'b101;
@@ -49,8 +49,8 @@ localparam RX_PTR_RST_BIT = 5;
 localparam RX_CLKS_PER_BIT = 8;
 
 wire [M_WIDTH-1:0] general_cfg;
-reg [M_WIDTH-1:0] tx_src_start;
-reg [M_WIDTH-1:0] tx_src_stop;
+reg [M_WIDTH-1:0] tx_dma_buf_start;
+reg [M_WIDTH-1:0] tx_dma_buf_end;
 reg [M_WIDTH-1:0] rx_dma_buf_start;
 reg [M_WIDTH-1:0] rx_dma_buf_end;
 reg tx_en;
@@ -83,18 +83,18 @@ tx_manager #(
     .rst(rst),
     .clk(clk),
 
-    .tx_en(tx_en),
-    .tx_clk_posedge(tx_clk_posedge),
-    .tx_ptr_rst(tx_ptr_rst),
-    .tx_src_start(tx_src_start),
-    .tx_src_stop(tx_src_stop),
-    .tx_done(tx_done),
+    .en(tx_en),
+    .ser_clk_posedge(tx_clk_posedge),
+    .ptr_rst(tx_ptr_rst),
+    .dma_buf_start(tx_dma_buf_start),
+    .dma_buf_end(tx_dma_buf_end),
+    .done(tx_done),
 
-    .tx_mem_data_in(tx_mem_data_in),
-    .tx_mem_ready(tx_mem_ready),
-    .tx_mem_req(tx_mem_req),
-    .tx_mem_addr(tx_mem_addr),
-    .tx_mem_width(tx_mem_width),
+    .mem_data_in(tx_mem_data_in),
+    .mem_ready(tx_mem_ready),
+    .mem_req(tx_mem_req),
+    .mem_addr(tx_mem_addr),
+    .mem_width(tx_mem_width),
 
     .tx(tx)
 );
@@ -124,7 +124,7 @@ rx_manager #(
     .mem_req(rx_mem_req),
     .mem_addr(rx_mem_addr),
     .mem_width(rx_mem_width),
-    .mem_data_in(rx_mem_data_out),
+    .mem_data_out(rx_mem_data_out),
 
     .rx(rx)
 );
@@ -135,14 +135,14 @@ assign general_cfg = 0 |
     (tx_done << TX_DONE_BIT) |
     (rx_dma_buf_full << RX_DMA_BUF_FULL_BIT);
 
-assign tx_ptr_rst = reg_req & reg_we & (reg_select == TX_SRC_START_ADDR);
+assign tx_ptr_rst = reg_req & reg_we & (reg_select == TX_DMA_BUF_START_ADDR);
 assign rx_ptr_rst = reg_req & reg_we & (reg_select == RX_DMA_BUF_PTR_ADDR) & reg_data_in[RX_PTR_RST_BIT];
 
 always @ (posedge clk) begin
     if (rst) begin
         tx_en <= 0;
-        tx_src_start <= 0;
-        tx_src_stop <= 0;
+        tx_dma_buf_start <= 0;
+        tx_dma_buf_end <= 0;
         reg_data_out <= 0;
         reg_ready <= 0;
     end else begin
@@ -156,15 +156,15 @@ always @ (posedge clk) begin
                         rx_en <= reg_data_in[RX_EN_BIT];
                     end
                 end
-                TX_SRC_START_ADDR: begin
-                    reg_data_out <= tx_src_start;
+                TX_DMA_BUF_START_ADDR: begin
+                    reg_data_out <= tx_dma_buf_start;
                     if (reg_we)
-                        tx_src_start <= reg_data_in;
+                        tx_dma_buf_start <= reg_data_in;
                 end
-                TX_SRC_STOP_ADDR: begin
-                    reg_data_out <= tx_src_stop;
+                TX_DMA_BUF_END_ADDR: begin
+                    reg_data_out <= tx_dma_buf_end;
                     if (reg_we)
-                        tx_src_stop <= reg_data_in;
+                        tx_dma_buf_end <= reg_data_in;
                 end
                 RX_DMA_BUF_START_ADDR: begin
                     reg_data_out <= rx_dma_buf_start;

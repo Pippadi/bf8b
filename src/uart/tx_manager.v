@@ -9,24 +9,24 @@ module tx_manager
     input rst,
     input clk,
 
-    input tx_en,
-    input tx_clk_posedge,
-    input tx_ptr_rst,
-    input [M_WIDTH-1:0] tx_src_start,
-    input [M_WIDTH-1:0] tx_src_stop,
-    output wire tx_done,
+    input en,
+    input ser_clk_posedge,
+    input ptr_rst,
+    input [M_WIDTH-1:0] dma_buf_start,
+    input [M_WIDTH-1:0] dma_buf_end,
+    output wire done,
 
-    input [M_WIDTH-1:0] tx_mem_data_in,
-    input tx_mem_ready,
-    output reg tx_mem_req,
-    output wire [M_WIDTH-1:0] tx_mem_addr,
-    output wire [1:0] tx_mem_width,
+    input [M_WIDTH-1:0] mem_data_in,
+    input mem_ready,
+    output reg mem_req,
+    output wire [M_WIDTH-1:0] mem_addr,
+    output wire [1:0] mem_width,
 
     output wire tx
 );
 
-reg [M_WIDTH-1:0] tx_ptr;
-reg [1:0] tx_mem_cycle;
+reg [M_WIDTH-1:0] ptr;
+reg [1:0] mem_cycle;
 wire tx_should_req;
 localparam TX_MEM_IDLE = 0;
 localparam TX_MEM_WAITING = 1;
@@ -42,7 +42,7 @@ wire tx_busy;
 tx_serializer TX_Ser (
     .rst(rst),
     .clk(clk),
-    .tx_clk_posedge(tx_clk_posedge),
+    .ser_clk_posedge(ser_clk_posedge),
     .data(tx_data),
     .data_available(~tx_fifo_empty),
     .busy(tx_busy),
@@ -56,7 +56,7 @@ fifo #(
 ) TXFIFO (
     .rst(rst),
     .clk(clk),
-    .data_in(tx_mem_data_in[7:0]),
+    .data_in(mem_data_in[7:0]),
     .write_en(tx_fifo_write_en),
     .read_en(tx_phy_data_req),
     .data_out(tx_data),
@@ -64,18 +64,18 @@ fifo #(
     .empty(tx_fifo_empty)
 );
 
-assign tx_mem_addr = tx_ptr;
-assign tx_mem_width = MEM_ACC_8;
-assign tx_should_req = ~tx_fifo_full & (tx_mem_cycle == TX_MEM_IDLE) & (tx_ptr != tx_src_stop);
-assign tx_done = tx_en & (tx_ptr == tx_src_stop) & ~tx_busy;
+assign mem_addr = ptr;
+assign mem_width = MEM_ACC_8;
+assign tx_should_req = ~tx_fifo_full & (mem_cycle == TX_MEM_IDLE) & (ptr != dma_buf_end);
+assign done = en & (ptr == dma_buf_end) & ~tx_busy;
 
 always @ (*) begin
-    tx_mem_req = 0;
+    mem_req = 0;
     tx_fifo_write_en = 0;
 
-    if (tx_en & ~tx_done) begin
-        case (tx_mem_cycle)
-            TX_MEM_WAITING: tx_mem_req = 1;
+    if (en & ~done) begin
+        case (mem_cycle)
+            TX_MEM_WAITING: mem_req = 1;
             TX_MEM_READY: tx_fifo_write_en = 1;
         endcase
     end
@@ -83,24 +83,24 @@ end
 
 always @ (posedge clk) begin
     if (rst) begin
-        tx_mem_cycle <= TX_MEM_IDLE;
-        tx_ptr <= 0;
+        mem_cycle <= TX_MEM_IDLE;
+        ptr <= 0;
     end else begin
-        if (tx_ptr_rst) begin
-            tx_ptr <= tx_src_start;
-            tx_mem_cycle <= TX_MEM_IDLE;
+        if (ptr_rst) begin
+            ptr <= dma_buf_start;
+            mem_cycle <= TX_MEM_IDLE;
         end else begin
-            if (tx_en & ~tx_done) begin
-                case (tx_mem_cycle)
-                    TX_MEM_IDLE: tx_mem_cycle <= tx_should_req ? TX_MEM_WAITING : TX_MEM_IDLE;
-                    TX_MEM_WAITING: tx_mem_cycle <= tx_mem_ready ? TX_MEM_READY : TX_MEM_WAITING;
+            if (en & ~done) begin
+                case (mem_cycle)
+                    TX_MEM_IDLE: mem_cycle <= tx_should_req ? TX_MEM_WAITING : TX_MEM_IDLE;
+                    TX_MEM_WAITING: mem_cycle <= mem_ready ? TX_MEM_READY : TX_MEM_WAITING;
                     TX_MEM_READY: begin
-                        tx_mem_cycle <= TX_MEM_IDLE;
-                        tx_ptr <= tx_ptr + 1;
+                        mem_cycle <= TX_MEM_IDLE;
+                        ptr <= ptr + 1;
                     end
                 endcase
             end else
-                tx_mem_cycle <= TX_MEM_IDLE;
+                mem_cycle <= TX_MEM_IDLE;
         end
     end
 end

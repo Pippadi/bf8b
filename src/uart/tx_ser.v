@@ -2,7 +2,7 @@ module tx_serializer
 (
     input rst,
     input clk,
-    input tx_clk_posedge,
+    input ser_clk_posedge,
     input data_available,
     input [7:0] data,
     output reg req,
@@ -26,7 +26,7 @@ always @ (posedge clk) begin
         end else
             req <= 0;
 
-        if (tx_clk_posedge) begin
+        if (ser_clk_posedge) begin
             // Possible race condition? Should be fine since data_read is only
             // set when not busy. Hopefully one cycle is enough for data to be valid.
             if (bit_cnt == 0 && data_read) begin
