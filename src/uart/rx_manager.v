@@ -60,7 +60,7 @@ fifo #(
     .clk(clk),
     .data_in(deser_data),
     .write_en(fifo_write_en),
-    .read_en(fifo_data_req),
+    .read_en(fifo_read_en),
     .data_out(fifo_data_out),
     .full(fifo_full),
     .empty(fifo_empty)
