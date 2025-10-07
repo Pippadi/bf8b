@@ -201,8 +201,9 @@ writeback #(
     .MEM_ACC_16(MEM_ACC_16),
     .MEM_ACC_32(MEM_ACC_32)
 ) Writeback (
-    .en(wb_en),
+    .rst(rst),
     .clk(clk),
+    .en(wb_en),
     .op(wb_op),
     .funct3(wb_funct3),
     .reg_addr(wb_reg_addr),

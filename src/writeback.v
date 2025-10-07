@@ -16,8 +16,9 @@ module writeback
     parameter MEM_ACC_32 = 2'b10
 )
 (
-    input en,
+    input rst,
     input clk,
+    input en,
     input [6:0] op,
     input [2:0] funct3,
     input [REG_ADDR_WIDTH-1:0] reg_addr,
@@ -46,19 +47,26 @@ assign needs_writeback =
     (op == OP_INTEGER) ||
     (op == OP_LOAD);
 
-// funct3[2] controls sign extension for loads
+integer j;
 always @ (posedge clk) begin
-    if (en && needs_writeback && reg_addr != 0) begin
-        casez ({op, funct3[1:0]})
-            {OP_LUI, 2'b??}: reg_file[reg_addr][31:12] <= val[31:12];
-            {OP_AUIPC, 2'b??}: reg_file[reg_addr][31:12] <= val[31:12];
-            {OP_LOAD, MEM_ACC_8}: reg_file[reg_addr] <= {{24{~funct3[2] & val[7]}}, val[7:0]};
-            {OP_LOAD, MEM_ACC_16}: reg_file[reg_addr] <= {{16{~funct3[2] & val[15]}}, val[15:0]};
-            default: reg_file[reg_addr] <= val;
-        endcase
-    end
-    ready <= en;
     reg_file[0] <= 0;
+    if (rst) begin
+        for (j = 1; j < REG_CNT; j = j + 1)
+            reg_file[j] <= 0;
+        ready <= 0;
+    end else begin
+        if (en && needs_writeback && reg_addr != 0) begin
+            // funct3[2] controls sign extension for loads
+            casez ({op, funct3[1:0]})
+                {OP_LUI, 2'b??}: reg_file[reg_addr][31:12] <= val[31:12];
+                {OP_AUIPC, 2'b??}: reg_file[reg_addr][31:12] <= val[31:12];
+                {OP_LOAD, MEM_ACC_8}: reg_file[reg_addr] <= {{24{~funct3[2] & val[7]}}, val[7:0]};
+                {OP_LOAD, MEM_ACC_16}: reg_file[reg_addr] <= {{16{~funct3[2] & val[15]}}, val[15:0]};
+                default: reg_file[reg_addr] <= val;
+            endcase
+        end
+        ready <= en;
+    end
 end
 
 endmodule
