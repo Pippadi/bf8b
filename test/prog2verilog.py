@@ -5,6 +5,40 @@ import os
 import argparse
 
 
+def generate_coe_file(hex_dump_path, coe_path):
+    """
+    Generate a 32-bit little-endian COE file from the hex dump
+    """
+    with open(hex_dump_path, "r") as f:
+        hex_lines = f.readlines()
+
+    # Prepare COE file header
+    coe_content = [
+            "memory_initialization_radix=16;\n",
+            "memory_initialization_vector=\n"
+            ]
+
+    # Convert hex bytes to 32-bit little-endian words
+    for i in range(0, len(hex_lines), 4):
+        # Ensure we have 4 bytes for a complete 32-bit word
+        if i + 3 < len(hex_lines):
+            # Little-endian: reverse the byte order
+            word = (
+                    hex_lines[i+3].strip() +
+                    hex_lines[i+2].strip() +
+                    hex_lines[i+1].strip() +
+                    hex_lines[i].strip()
+                    )
+            coe_content.append(word + ",\n")
+
+    # Remove the last comma and add terminating semicolon
+    coe_content[-1] = coe_content[-1].rstrip(",\n") + ";"
+
+    # Write COE file
+    with open(coe_path, "w") as f:
+        f.writelines(coe_content)
+
+
 def main():
     parser = argparse.ArgumentParser(
             description="Generate hex files from RISC-V assembly"
@@ -79,6 +113,9 @@ def main():
         block_data = "".join(hex_lines[i::num_blocks])
         with open(f"{args.output_dir}/{base_name}_block{i}.hex", "w") as f:
             f.write(block_data)
+
+    coe_path = os.path.join(args.output_dir, f"{base_name}.coe")
+    generate_coe_file(hex_dump_path, coe_path)
 
     # Delete intermediate files if requested
     if args.delete_intermediate:

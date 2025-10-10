@@ -9,3 +9,4 @@ bf8b.srcs
 bf8b.xpr
 target
 *.hex
+*.coe
