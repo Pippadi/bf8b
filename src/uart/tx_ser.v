@@ -18,7 +18,7 @@ always @ (posedge clk) begin
     if (rst) begin
         bit_cnt <= 0;
         data_read <= 0;
-        tx_byte_buf <= 10'b0;
+        tx_byte_buf <= 10'b1;
     end else begin
         if (data_available & ~busy & ~data_read) begin
             req <= 1;
@@ -30,11 +30,11 @@ always @ (posedge clk) begin
             // Possible race condition? Should be fine since data_read is only
             // set when not busy. Hopefully one cycle is enough for data to be valid.
             if (bit_cnt == 0 && data_read) begin
-                tx_byte_buf <= {1'b0, data, 1'b1};
+                tx_byte_buf <= {1'b1, data, 1'b0};
                 data_read <= 0;
                 bit_cnt <= 10;
             end else if (bit_cnt != 0) begin
-                tx_byte_buf <= {1'b0, tx_byte_buf[9:1]};
+                tx_byte_buf <= {1'b1, tx_byte_buf[9:1]};
                 bit_cnt <= bit_cnt - 1;
             end
         end
@@ -42,6 +42,6 @@ always @ (posedge clk) begin
 end
 
 assign busy = bit_cnt != 0;
-assign tx = ~tx_byte_buf[0] | rst;
+assign tx = tx_byte_buf[0];
 
 endmodule
