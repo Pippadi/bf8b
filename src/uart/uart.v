@@ -136,7 +136,9 @@ assign general_cfg = 0 |
     (rx_dma_buf_full << RX_DMA_BUF_FULL_BIT);
 
 assign tx_ptr_rst = reg_req & reg_we & (reg_select == TX_DMA_BUF_START_ADDR);
-assign rx_ptr_rst = reg_req & reg_we & (reg_select == RX_DMA_BUF_PTR_ADDR) & reg_data_in[RX_PTR_RST_BIT];
+assign rx_ptr_rst = reg_req & reg_we &
+    ((reg_select == RX_DMA_BUF_START_ADDR) |
+    ((reg_select == GENERAL_CFG_ADDR) & reg_data_in[RX_PTR_RST_BIT]));
 
 always @ (posedge clk) begin
     if (rst) begin

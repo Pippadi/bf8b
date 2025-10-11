@@ -25,6 +25,7 @@ always @ (posedge clk) begin
         latch_data <= 'b0;
         clk_count <= 'b0;
         bit_idx <= 'b0;
+        line_active <= 'b0;
     end else begin
         if (~line_active & ~rx) begin
             line_active <= 'b1;
