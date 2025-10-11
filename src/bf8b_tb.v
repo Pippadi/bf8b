@@ -77,14 +77,19 @@ initial begin
             rst = 0;
         end
 
-        begin
-            for (i = 0; i < 6144; i = i + 1)
-                pulseClk();
+        forever begin
+            pulseClk();
+            if (mem3[1023] == 'hFF) begin
+                #2;
+                $finish;
+            end
         end
+
+        #10000 $finish;
     join
 end
 
-assign rx = 1'b1;
+assign rx = tx;
 
 always @(posedge clk) begin
     if (wes[0])

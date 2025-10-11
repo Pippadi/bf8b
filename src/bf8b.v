@@ -229,7 +229,7 @@ wire [M_WIDTH-1:0] uart_rx_mem_data_out;
 wire uart_rx_mem_ready;
 
 wire uart_selected;
-assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 'h0C);
+assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 'h100);
 
 uart UART (
     .rst(rst),
@@ -239,7 +239,7 @@ uart UART (
     .reg_we(exec_mem_we),
     .reg_data_in(exec_data_out),
     .reg_data_out(uart_reg_data_in),
-    .reg_select(exec_mem_addr[4:2]), // 4 registers aligned to 4 bytes
+    .reg_select(exec_mem_addr[4:2]),
     .reg_ready(uart_reg_ready),
 
     .tx_mem_req(uart_tx_mem_req),
