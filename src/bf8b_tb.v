@@ -65,7 +65,7 @@ initial begin
         $dumpvars(0, BF8B.Writeback.reg_file[i]);
     end
 
-    for (i = 0; i < 8; i = i + 1) begin
+    for (i = 0; i < 32; i = i + 1) begin
         $dumpvars(0, BF8B.Fetch.ICache.ShiftReg.q[i]);
     end
 
