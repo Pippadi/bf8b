@@ -14,7 +14,7 @@ module cache
     output hit
 );
 
-reg [0:CELL_CNT-1] enables;
+reg [CELL_CNT-1:0] enables;
 
 reg [ADDR_WIDTH+DATA_WIDTH-1:0] d_shiftin;
 wire [(ADDR_WIDTH+DATA_WIDTH)*CELL_CNT-1:0] reg_data_packed;
@@ -43,7 +43,7 @@ en_shift_reg #(
 
 reg [CELL_CNT-1:0] cmp_results;
 wire [$clog2(CELL_CNT)-1:0] hit_idx;
-wire [0:CELL_CNT-1] temp_enables;
+wire [CELL_CNT-1:0] temp_enables;
 
 prio_enabler #(
     .CELL_CNT(CELL_CNT)
@@ -69,7 +69,7 @@ always @ (*) begin
     // Shift in the requested data to make it the least aged, overwriting
     // its old position in the cache. Only shift if the hit is not in the
     // first position.
-    else if (hit && |temp_enables[1:CELL_CNT-1]) begin
+    else if (hit && |temp_enables[CELL_CNT-1:1]) begin
         d_shiftin = {addr, data_out};
         enables = temp_enables;
     end

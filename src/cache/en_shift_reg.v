@@ -7,7 +7,7 @@ module en_shift_reg
 (
     input rst,
     input clk,
-    input [0:LENGTH-1] en,
+    input [LENGTH-1:0] en,
     input [WIDTH-1:0] d,
     output reg [LENGTH * WIDTH - 1:0] q_packed
 );
@@ -30,9 +30,8 @@ end
 integer j;
 always @ (posedge clk) begin
     if (rst) begin
-        for (j = 0; j < LENGTH; j = j + 1) begin
+        for (j = 0; j < LENGTH; j = j + 1)
             q[j] <= {WIDTH{1'b1}};
-        end
     end
     else begin
         for (j = 0; j < LENGTH; j = j + 1) begin

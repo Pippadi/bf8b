@@ -5,13 +5,10 @@ module prio_enabler
 (
     input [CELL_CNT-1:0] cmp_results,
     output wire [$clog2(CELL_CNT)-1:0] hit_idx,
-    output reg [0:CELL_CNT-1] enables
+    output wire [CELL_CNT-1:0] enables
 );
 
-reg highest_found = 0;
-integer i;
-
-genvar j, k;
+genvar i, j, k;
 generate
     assign hit_idx[$clog2(CELL_CNT)-1] = |cmp_results[CELL_CNT-1:CELL_CNT/2];
 
@@ -24,17 +21,8 @@ generate
 
         assign hit_idx[j] = grouped[hit_idx[$clog2(CELL_CNT)-1:j+1]];
     end
+
+    assign enables = |cmp_results ? {CELL_CNT{1'b1}} >> (CELL_CNT - 1 - hit_idx) : {CELL_CNT{1'b1}};
 endgenerate
 
-always @ (*) begin
-    highest_found = 0;
-    enables = {CELL_CNT{1'b1}};
-
-    for (i = 0; i < CELL_CNT; i = i + 1) begin
-        if (cmp_results[i] & ~highest_found) begin
-            highest_found = 1;
-            enables = {CELL_CNT{1'b1}} << (CELL_CNT - 1 - i);
-        end
-    end
-end
 endmodule
