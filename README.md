@@ -2,8 +2,6 @@
 
 A simple RISC-V CPU core. Currently implements barebones `rv32i`.
 
-My first Verilog project. I have no idea what I'm doing.
-
 > Formerly **B**aby's **F**irst **8**-**B**it computer
 
 ## Details
@@ -14,6 +12,8 @@ My first Verilog project. I have no idea what I'm doing.
 - LRU Instruction cache
 - In-order execution
 - No exceptions or interrupts yet
+
+For lower-level documentation, see the README files in the [`src`](/src) directory.
 
 ## Programming
 
@@ -29,7 +29,7 @@ python3 test/prog2verilog.py test/fibonacci.s -d
 
 Edit [the testbench](/src/bf8b_tb.v) so that the `$readmemh` directives read the correct hex files.
 
-Execution begins at address `0x00` (specified in the [linker script](/test/bf8b.ld)).
+Execution begins at address `0x00000000` (specified in the [linker script](/test/bf8b.ld)).
 Ensure that you specify an adequate number of clock pulses in the simulation for your program.
 Dump bytes of `mem` relevant to you to the VCD file with `$dumpvars(0, mem[ADDR])`.
 
@@ -45,7 +45,7 @@ make sim
 
 ## Architectural Notes
 
-The LRU instruction cache has a default size of 8 instructions.
+The LRU instruction cache has a default size of 32 instructions.
 On-the-fly modification of instructions is not supported, as the fetch stage does not check for consistency between cached instructions and memory.
 
 LRU behavior is implemented by building the cache around a modified shift register.
@@ -54,8 +54,6 @@ Further, each level can be enabled or disabled individually, meaning that shifts
 
 Data to be cached is shifted in.
 Writing data whose address is not present in the cache results in the oldest data getting shifted out.
-When there is a hit on data, the hit data is shifted into the top, and all the data above it, are shifted.
+When there is a hit on a line, the hit data is shifted into the top, and all the data above it, is shifted.
 In other words, the hit data is shifted to the top of the shift register, its old position being overwritten while all the older cells remain untouched.
 It is the position of the data within the shift register that determines age. There are no separate bits spent on tracking age.
-
-Basic branch prediction and a D cache are future goals.

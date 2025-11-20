@@ -30,7 +30,7 @@ The memory interface arbitrates between clients using a simple fixed priority sc
 3. UART RX
 4. UART TX
 
-Nonaligned accesses are supported, with the memory interface handling the necessary read-modify-write cycles for writes.
+Nonaligned accesses are supported, with the memory interface handling the necessary byte enables and data shifting.
 
 ##### Ports
 
@@ -52,3 +52,13 @@ Nonaligned accesses are supported, with the memory interface handling the necess
 A client sets `mem_req` high to request a memory access, with `mem_we`, `mem_addr`, `mem_data_out`, and `mem_width` set appropriately.
 The memory interface will assert `mem_ready` when the access is complete, and provide the read data on `mem_data_in` for read accesses.
 `mem_req` is deasserted by the client once `mem_ready` is seen and, if relevant, the read data has been latched.
+
+### Control Unit
+
+The control unit generates control signals for the datapath based on the decoded instruction.
+
+Control of the program counter (PC) is handled here, but the execute stage handles branch condition evaluation.
+As of now, there is no branch prediction, so all branches cause a pipeline flush.
+
+Each instruction goes through all four stages of the pipeline, with no instruction being able to bypass any stage.
+Stalls are inserted by the execute stage as needed to handle hazards.
