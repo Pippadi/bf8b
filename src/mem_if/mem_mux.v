@@ -72,6 +72,13 @@ always @ (*) begin
         client_readies[mem_mux_holder] = mem_ready;
         client_data_ins[mem_mux_holder] = mem_data_in;
 
+        for (j = 0; j < CLIENT_CNT; j = j + 1) begin
+            if (j != mem_mux_holder) begin
+                client_readies[j] = 0;
+                client_data_ins[j] = 0;
+            end
+        end
+
         case (cycle)
             1: mem_request = 1;
             2: mem_request = client_requests[mem_mux_holder];

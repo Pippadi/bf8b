@@ -121,6 +121,8 @@ always @ (*) begin
             end
 
             MEM_READY: client_ready = client_request;
+
+            default: client_ready = 0;
         endcase
     end
 end
