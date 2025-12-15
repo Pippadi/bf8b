@@ -12,6 +12,7 @@ module bf8b
     parameter OP_INTEGER_IMM = 7'b0010011,
     parameter OP_INTEGER = 7'b0110011,
 
+    parameter CLK_FREQ = 20000000,
     parameter UART_BASE_ADDR = 32'hFFFF0000
 )
 (
@@ -229,9 +230,13 @@ wire [M_WIDTH-1:0] uart_rx_mem_data_out;
 wire uart_rx_mem_ready;
 
 wire uart_selected;
-assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 'h100);
+assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 6'h20);
 
-uart UART (
+uart #(
+    .M_WIDTH(M_WIDTH),
+    .CLK_FREQ(CLK_FREQ),
+    .BAUD_RATE(115200)
+) UART (
     .rst(rst),
     .clk(clk),
 
