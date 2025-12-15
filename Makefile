@@ -1,7 +1,8 @@
 .PHONY += clean sim
 
+PROJ = bf8b
+
 SRC_DIR := src
-TARGET_DIR := target
 
 SRCS += $(SRC_DIR)/bf8b.v
 SRCS += $(SRC_DIR)/bf8b_tb.v
@@ -24,15 +25,34 @@ SRCS += $(SRC_DIR)/uart/rx_deser.v
 SRCS += $(SRC_DIR)/uart/fifo.v
 SRCS += $(SRC_DIR)/uart/uart.v
 
-bf8b:
-	mkdir -p $(TARGET_DIR)
-	iverilog -g2012 ${SRCS} -o $(TARGET_DIR)/bf8b
+OC_VERSION=r0.2.1
+OC_PCF_FILE=../orangecrab-examples/verilog/orangecrab_${OC_VERSION}.pcf
+NEXTPNR_DENSITY=--25k
 
-bf8b.vcd:
-	vvp $(TARGET_DIR)/bf8b
+vcd: $(PROJ).vcd
 
-sim:
-	gtkwave $(TARGET_DIR)/bf8b.vcd
+%.vcd:
+	iverilog -g2012 ${SRCS} -o $(PROJ)
+	vvp $(PROJ)
+
+sim: $(PROJ).vcd
+	gtkwave $<
+
+dfu: ${PROJ}.dfu
+	dfu-util --alt 0 -D $<
+
+%.json:
+	yosys -p "read_verilog ${SRCS}; synth_ecp5 -json $@"
+
+%_out.config: %.json
+	nextpnr-ecp5 --json $< --textcfg $@ $(NEXTPNR_DENSITY) --package CSFBGA285 --lpf $(OC_PCF_FILE)
+
+%.bit: %_out.config
+	ecppack --compress --freq 38.8 --input $< --bit $@
+
+%.dfu : %.bit
+	cp -a $< $@
+	dfu-suffix -v 1209 -p 5af0 -a $@
 
 clean:
-	rm -r $(TARGET_DIR)
+	rm -f ${PROJ}.bit ${PROJ}_out.config ${PROJ}.json ${PROJ}.dfu $(PROJ) $(PROJ).vcd

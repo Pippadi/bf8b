@@ -49,7 +49,7 @@ initial begin
     $readmemh("fibonacci_block3.hex", mem3);
     /****************/
 
-    $dumpfile("target/bf8b.vcd");
+    $dumpfile("bf8b.vcd");
     $dumpvars(0, bf8b_tb);
 
     // Memory content dump
