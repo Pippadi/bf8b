@@ -65,7 +65,6 @@ always @ (*) begin
                 mem_mux_holder_temp = j;
         end
 
-        mem_request = 0;
         mem_data_out = client_data_outs[mem_mux_holder];
         mem_addr = client_addrs[mem_mux_holder];
         mem_data_width = client_data_widths[mem_mux_holder];
@@ -74,19 +73,9 @@ always @ (*) begin
         client_data_ins[mem_mux_holder] = mem_data_in;
 
         case (cycle)
-            0: begin
-                if (client_requests) begin
-                    mem_data_out = client_data_outs[mem_mux_holder_temp];
-                    mem_addr = client_addrs[mem_mux_holder_temp];
-                    mem_data_width = client_data_widths[mem_mux_holder_temp];
-                    mem_we_out = client_wes[mem_mux_holder_temp];
-                    mem_request = 1;
-                end
-            end
-
             1: mem_request = 1;
-
             2: mem_request = client_requests[mem_mux_holder];
+            default: mem_request = 0;
         endcase
     end
 end
