@@ -98,6 +98,7 @@ always @ (*) begin
     alu_in1 = 0;
     alu_in2 = 0;
     alu_funct3 = F3_ADD;
+    pc_out = pc_in;
     mem_req = 0;
     mem_addr = 0;
     mem_we = 0;

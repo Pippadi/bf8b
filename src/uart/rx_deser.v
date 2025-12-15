@@ -1,6 +1,6 @@
 module rx_deserializer
 #(
-    RX_CLKS_PER_BIT = 8
+    parameter RX_CLKS_PER_BIT = 8
 )
 (
     input rst,

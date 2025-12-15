@@ -1,7 +1,7 @@
 module fetch
 #(
-    M_WIDTH = 8,
-    INST_WIDTH = 16
+    parameter M_WIDTH = 8,
+    parameter INST_WIDTH = 16
 )
 (
     input rst,

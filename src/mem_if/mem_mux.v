@@ -54,6 +54,9 @@ always @ (*) begin
         mem_data_width = 0;
         mem_we_out = 0;
         client_readies = 0;
+        for (j = 0; j < CLIENT_CNT; j = j + 1) begin
+            client_data_ins[j] = 0;
+        end
         mem_mux_holder_temp = 0;
     end else begin
         mem_mux_holder_temp = 0;
