@@ -3,12 +3,20 @@
 module top(
     input clk48,
     input usr_btn,
-    output gpio_13
+    output gpio_13,
+    output gpio_12,
+    output gpio_11,
+    output gpio_10,
+    output rgb_led0_r,
+    output rgb_led0_g,
+    output rgb_led0_b
 );
+
+wire clk30;
 
 pll PLL_Inst (
     .clkin(clk48),
-    .clkout0(clk20),
+    .clkout0(clk30),
     .locked(pll_locked)
 );
 
@@ -26,35 +34,45 @@ wire [3:0] wes;
 wire tx;
 wire rx;
 wire rst;
-assign rst = ~usr_btn;
+
+assign rst = ~usr_btn | ~pll_locked;
+assign rgb_led0_r = tx;
+assign rgb_led0_g = ~pll_locked;
+assign rgb_led0_b = |wes;
 
 bf8b #(
     .M_WIDTH(32),
     .REG_CNT(32),
-    .CLK_FREQ(20000000)
+    .CLK_FREQ(30000000)
 ) BF8B (
-.rst(rst),
-.clk(clk20),
-.addr(addr),
-.data_in(data_out),
-.data_out(data_in),
-.wes(wes),
-.tx(tx),
-.rx(rx)
+    .rst(rst),
+    .clk(clk30),
+    .addr(addr),
+    .data_in(data_out),
+    .data_out(data_in),
+    .wes(wes),
+    .tx(tx),
+    .rx(rx)
 );
 
 initial begin
     // Memory initialization
     /*** Change me ***/
-    $readmemh("fibonacci_block0.hex", mem0);
-    $readmemh("fibonacci_block1.hex", mem1);
-    $readmemh("fibonacci_block2.hex", mem2);
-    $readmemh("fibonacci_block3.hex", mem3);
+    $readmemh("ram_block0.hex", mem0);
+    $readmemh("ram_block1.hex", mem1);
+    $readmemh("ram_block2.hex", mem2);
+    $readmemh("ram_block3.hex", mem3);
     /****************/
 end
 
 assign rx = tx;
 assign gpio_13 = tx;
+assign gpio_11 = addr[0];
+assign gpio_12 = addr[1];
+assign gpio_10 = rst;
+assign gpio_9 = clk30;
+assign gpio_6 = |wes;
+assign gpio_5 = clk48;
 
 always @(posedge clk) begin
     if (wes[0])
