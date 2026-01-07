@@ -81,6 +81,6 @@ dfu: ${PROJ}.dfu
 
 clean:
 	rm -f ${PROJ}.bit ${PROJ}_out.config ${PROJ}.json \
-		${PROJ}.dfu $(PROJ) $(PROJ).vcd $(OC_PLL_FILENAME) \
+		${PROJ}.dfu $(PROJ).vvp $(PROJ).vcd $(OC_PLL_FILENAME) \
 		$(BRAM_0_DEF_INIT) $(BRAM_1_DEF_INIT) \
 		$(BRAM_2_DEF_INIT) $(BRAM_3_DEF_INIT)

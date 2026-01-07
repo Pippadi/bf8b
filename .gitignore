@@ -10,3 +10,4 @@ bf8b.xpr
 target
 *.hex
 *.coe
+*.vcd

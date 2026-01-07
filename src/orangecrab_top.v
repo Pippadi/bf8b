@@ -7,6 +7,9 @@ module top(
     output gpio_12,
     output gpio_11,
     output gpio_10,
+    output gpio_9,
+    output gpio_6,
+    output gpio_5,
     output rgb_led0_r,
     output rgb_led0_g,
     output rgb_led0_b
@@ -36,9 +39,6 @@ wire rx;
 wire rst;
 
 assign rst = ~usr_btn | ~pll_locked;
-assign rgb_led0_r = tx;
-assign rgb_led0_g = ~pll_locked;
-assign rgb_led0_b = |wes;
 
 bf8b #(
     .M_WIDTH(32),
@@ -57,24 +57,24 @@ bf8b #(
 
 initial begin
     // Memory initialization
-    /*** Change me ***/
     $readmemh("ram_block0.hex", mem0);
     $readmemh("ram_block1.hex", mem1);
     $readmemh("ram_block2.hex", mem2);
     $readmemh("ram_block3.hex", mem3);
-    /****************/
 end
 
 assign rx = tx;
 assign gpio_13 = tx;
-assign gpio_11 = addr[0];
-assign gpio_12 = addr[1];
-assign gpio_10 = rst;
-assign gpio_9 = clk30;
-assign gpio_6 = |wes;
-assign gpio_5 = clk48;
+assign gpio_12 = data_out[8];
+assign gpio_11 = data_out[7];
+assign gpio_10 = data_out[6];
+assign gpio_9  = data_out[5];
+assign gpio_6  = data_out[4];
+assign rgb_led0_r = ~data_out[2];
+assign rgb_led0_g = ~data_out[1];
+assign rgb_led0_b = ~data_out[0];
 
-always @(posedge clk) begin
+always @(posedge clk30) begin
     if (wes[0])
         mem0[addr] <= data_in[0+:8];
     if (wes[1])
