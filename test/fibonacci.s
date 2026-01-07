@@ -31,8 +31,11 @@ loop_top:
 	sub  t0, t0, t1
 	bnez t0, loop_top
 
-	addi t0, zero, UART_BASE & 0xFFF
-	lui  t0, UART_BASE >> 12
+	li  t0, UART_BASE & 0xFFF
+	lui t0, UART_BASE >> 12
+
+write_uart:
+	addi a3, zero, 0xE0
 
 	sw   a3, UART_TX_DMA_BUF_START_REG(t0) # Write fibonacci number address
 	addi a3, a3, 1
@@ -45,16 +48,18 @@ loop_top:
 	sw   t1, UART_GEN_CFG_REG(t0)      # Enable UART TX and RX
 
 wait_tx_done:
-	addi t2, zero, 1
-	lw   t1, UART_RX_DMA_BUF_PTR_REG(t0)
-	bne  t1, t2, wait_tx_done
+	lw  t1, UART_RX_DMA_BUF_PTR_REG(t0)
+	bne t1, a3, wait_tx_done
 
-	addi t1, zero, (1 << UART_RX_PTR_RST_BIT)
-	sw   t1, UART_GEN_CFG_REG(t0)      # Clear TX and RX enable, and reset RX pointer
+	xor t1, t1, t1
+	li  t1, (1 << UART_RX_PTR_RST_BIT)
+	sw  t1, UART_GEN_CFG_REG(t0)      # Clear TX and RX enable, and reset RX pointer
 
-	addi t0, zero, 0xFF
-	addi t1, zero, -1   # 0xFFF
-	lb   t0, (t1)
+	xor  t1, t1, t1
+	lui  t1, 1 # addi sign-extends, so we need to load 1 for the addition to overflow and give us 0x0000_0FFC
+	addi t1, t1, -4
+	li   t0, 0xFF
+	sb   t0, (t1) # Write 0xFF to address 0x3FF of bank 0
 
 halt:
 	j halt

@@ -79,13 +79,16 @@ initial begin
 
         forever begin
             pulseClk();
-            if (mem3[1023] == 'hFF) begin
+            if (mem0[1023] == 'hFF) begin
                 #2;
                 $finish;
             end
         end
 
-        #10000 $finish;
+	begin
+	    #10000 $display("Timeout");
+	    $finish;
+    end
     join
 end
 
