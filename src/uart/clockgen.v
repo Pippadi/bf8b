@@ -15,7 +15,8 @@ reg [$clog2(RX_CLKS_PER_BIT)-1:0] tx_clk_ctr;
 reg tx_clk, tx_clk_prev;
 reg rx_clk, rx_clk_prev;
 
-always @ (posedge main_clk or posedge rst) begin
+// RX clock enable generation
+always @ (posedge main_clk) begin
     if (rst) begin
         rx_clk_ctr <= 0;
         rx_clk <= 0;
@@ -35,19 +36,22 @@ always @ (posedge main_clk or posedge rst) begin
     end
 end
 
-always @ (posedge rx_clk or posedge rst) begin
+// TX clock enable generation
+always @ (posedge main_clk) begin
     if (rst) begin
         tx_clk_ctr <= 0;
         tx_clk <= 0;
     end else begin
-        if (tx_clk_ctr == RX_CLKS_PER_BIT - 1) begin
-            tx_clk_ctr <= 0;
-            tx_clk <= 0;
-        end else
-            tx_clk_ctr <= tx_clk_ctr + 1;
+        if (rx_clk_posedge) begin
+            if (tx_clk_ctr == RX_CLKS_PER_BIT - 1) begin
+                tx_clk_ctr <= 0;
+                tx_clk <= 0;
+            end else
+                tx_clk_ctr <= tx_clk_ctr + 1;
 
-        if (tx_clk_ctr == RX_CLKS_PER_BIT/2)
-            tx_clk <= 1;
+            if (tx_clk_ctr == RX_CLKS_PER_BIT/2)
+                tx_clk <= 1;
+        end
     end
 end
 
