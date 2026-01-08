@@ -39,8 +39,7 @@ localparam MEM_ACC_8 = 2'b00;
 localparam MEM_ACC_16 = 2'b01;
 localparam MEM_ACC_32 = 2'b10;
 
-wire [M_WIDTH-1:0] reg_file [REG_CNT-1:0];
-wire [M_WIDTH*REG_CNT-1:0] packed_reg_file;
+wire [M_WIDTH*REG_CNT-1:0] reg_file_packed;
 
 reg [M_WIDTH-1:0] pc, pc_next;
 
@@ -77,8 +76,9 @@ reg [INST_WIDTH-1:0] decode_inst, decode_inst_next;
 reg [M_WIDTH-1:0] decode_pc, decode_pc_next;
 wire decode_ready;
 wire [OP_WIDTH-1:0] decode_op;
-wire [REG_ADDR_WIDTH-1:0] decode_rd, decode_rs1, decode_rs2;
-wire [M_WIDTH-1:0] decode_imm;
+wire [REG_ADDR_WIDTH-1:0] decode_rd;
+wire [M_WIDTH-1:0] decode_rs1, decode_rs2;
+wire [M_WIDTH-1:0] decode_imm, decode_addr_out;
 wire [6:0] decode_funct7;
 wire [2:0] decode_funct3;
 wire [1:0] decode_state;
@@ -88,6 +88,7 @@ assign decode_state = {decode_en, decode_ready};
 decode #(
     .M_WIDTH(M_WIDTH),
     .OP_WIDTH(OP_WIDTH),
+    .REG_CNT(REG_CNT),
     .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
     .INST_WIDTH(INST_WIDTH),
     .OP_LUI(OP_LUI),
@@ -103,11 +104,14 @@ decode #(
     .en(decode_en),
     .clk(clk),
     .inst(decode_inst),
+    .pc(decode_pc),
+    .reg_file_packed(reg_file_packed),
     .op(decode_op),
     .rd(decode_rd),
     .rs1(decode_rs1),
     .rs2(decode_rs2),
     .imm(decode_imm),
+    .addr(decode_addr_out),
     .funct7(decode_funct7),
     .funct3(decode_funct3),
     .ready(decode_ready)
@@ -120,6 +124,7 @@ reg [M_WIDTH-1:0] exec_pc_in, exec_pc_in_next;
 reg [M_WIDTH-1:0] exec_rs1_in, exec_rs1_in_next;
 reg [M_WIDTH-1:0] exec_rs2_in, exec_rs2_in_next;
 reg [M_WIDTH-1:0] exec_imm_in, exec_imm_in_next;
+reg [M_WIDTH-1:0] exec_addr_in, exec_addr_in_next;
 reg [2:0] exec_funct3, exec_funct3_next;
 reg [6:0] exec_funct7, exec_funct7_next;
 wire [M_WIDTH-1:0] exec_data_out;
@@ -161,6 +166,7 @@ exec #(
     .rs1(exec_rs1_in),
     .rs2(exec_rs2_in),
     .imm(exec_imm_in),
+    .addr_in(exec_addr_in),
     .funct3(exec_funct3),
     .funct7(exec_funct7),
     .mem_ready(exec_mem_ready),
@@ -209,7 +215,7 @@ writeback #(
     .funct3(wb_funct3),
     .reg_addr(wb_reg_addr),
     .val(wb_val),
-    .regs(packed_reg_file),
+    .regs(reg_file_packed),
     .ready(wb_ready)
 );
 
@@ -287,13 +293,6 @@ mem_if #(
     .mem_we_outs(wes)
 );
 
-genvar i;
-generate
-    for (i = 0; i < REG_CNT; i = i + 1) begin
-        assign reg_file[i] = packed_reg_file[M_WIDTH*i +: M_WIDTH];
-    end
-endgenerate
-
 reg fetch_should_start;
 reg decode_should_start;
 reg exec_should_start;
@@ -345,6 +344,7 @@ always @ (*) begin
     exec_rs1_in_next = exec_rs1_in;
     exec_rs2_in_next = exec_rs2_in;
     exec_imm_in_next = exec_imm_in;
+    exec_addr_in_next = exec_addr_in;
     exec_funct3_next = exec_funct3;
     exec_funct7_next = exec_funct7;
     if (exec_should_start) begin
@@ -352,9 +352,10 @@ always @ (*) begin
         exec_op_next = decode_op;
         exec_pc_in_next = decode_pc;
         exec_wb_addr_next = decode_rd;
-        exec_rs1_in_next = reg_file[decode_rs1];
-        exec_rs2_in_next = reg_file[decode_rs2];
+        exec_rs1_in_next = decode_rs1;
+        exec_rs2_in_next = decode_rs2;
         exec_imm_in_next = decode_imm;
+        exec_addr_in_next = decode_addr_out;
         exec_funct3_next = decode_funct3;
         exec_funct7_next = decode_funct7;
         decode_en_next = 0;
@@ -430,6 +431,7 @@ always @ (posedge clk) begin
         exec_rs1_in <= exec_rs1_in_next;
         exec_rs2_in <= exec_rs2_in_next;
         exec_imm_in <= exec_imm_in_next;
+        exec_addr_in <= exec_addr_in_next;
         exec_funct3 <= exec_funct3_next;
         exec_funct7 <= exec_funct7_next;
 

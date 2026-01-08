@@ -39,6 +39,7 @@ module exec
     input [M_WIDTH-1:0] rs1,
     input [M_WIDTH-1:0] rs2,
     input [M_WIDTH-1:0] imm,
+    input [M_WIDTH-1:0] addr_in,
     input [M_WIDTH-1:0] mem_data_in,
     input mem_ready,
     output reg [M_WIDTH-1:0] pc_out,
@@ -75,19 +76,6 @@ alu #(
     .out(alu_out)
 );
 
-reg [M_WIDTH-1:0] aux_adder_in1;
-reg [M_WIDTH-1:0] aux_adder_in2;
-wire [M_WIDTH-1:0] aux_adder_out;
-
-adder #(
-    .M_WIDTH(M_WIDTH)
-) AuxAdder (
-    .cin(1'b0),
-    .in1(aux_adder_in1),
-    .in2(aux_adder_in2),
-    .out(aux_adder_out)
-);
-
 reg [M_WIDTH-1:0] val_temp;
 reg cycle;
 
@@ -104,14 +92,12 @@ always @ (*) begin
     mem_we = 0;
     mem_data_out = 0;
     mem_acc_width = funct3[1:0];
-    aux_adder_in1 = imm;
-    aux_adder_in2 = rs1;
     ready = cycle == 1;
 
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin
             if (cycle == 0) begin
-                mem_addr = aux_adder_out;
+                mem_addr = addr_in;
                 mem_we = op == OP_STORE;
                 mem_data_out = rs2;
                 mem_req = 1;
@@ -132,15 +118,13 @@ always @ (*) begin
                 OP_JAL: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
-                    aux_adder_in1 = pc_in;
-                    aux_adder_in2 = imm;
-                    pc_out = aux_adder_out;
+                    pc_out = addr_in;
                     flush_pipeline = 1;
                 end
                 OP_JALR: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
-                    pc_out = {aux_adder_out[M_WIDTH-1:1], 1'b0};
+                    pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
                     flush_pipeline = 1;
                 end
                 OP_INTEGER_IMM: begin
@@ -158,9 +142,7 @@ always @ (*) begin
                 OP_BRANCH: begin
                     alu_in1 = rs1;
                     alu_in2 = rs2;
-                    aux_adder_in1 = pc_in;
-                    aux_adder_in2 = imm;
-                    pc_out = aux_adder_out;
+                    pc_out = addr_in;
                     case (funct3)
                         F3_EQ: begin
                             alu_modifier = 1;
