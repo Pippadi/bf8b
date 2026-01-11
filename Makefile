@@ -12,6 +12,7 @@ SRC_DIR := src
 SRCS += $(SRC_DIR)/bf8b.v
 SRCS += $(SRC_DIR)/fetch.v
 SRCS += $(SRC_DIR)/decode.v
+SRCS += $(SRC_DIR)/branchpredict/branchpredict.v
 SRCS += $(SRC_DIR)/common/adder.v
 SRCS += $(SRC_DIR)/execute/alu.v
 SRCS += $(SRC_DIR)/execute/execute.v

@@ -49,7 +49,7 @@ module exec
     output reg [1:0] mem_acc_width,
     output reg mem_req,
     output reg mem_we,
-    output reg flush_pipeline,
+    output reg branch,
     output reg ready
 );
 
@@ -80,7 +80,7 @@ reg [M_WIDTH-1:0] val_temp;
 reg cycle;
 
 always @ (*) begin
-    flush_pipeline = 0;
+    branch = 0;
     alu_modifier = 0;
     val_temp = alu_out;
     alu_in1 = 0;
@@ -118,14 +118,14 @@ always @ (*) begin
                 OP_JAL: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
-                    pc_out = addr_in;
-                    flush_pipeline = 1;
+                    pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
+                    branch = 1;
                 end
                 OP_JALR: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
                     pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
-                    flush_pipeline = 1;
+                    branch = 1;
                 end
                 OP_INTEGER_IMM: begin
                     alu_in1 = rs1;
@@ -146,27 +146,27 @@ always @ (*) begin
                     case (funct3)
                         F3_EQ: begin
                             alu_modifier = 1;
-                            flush_pipeline = ~|alu_out;
+                            branch = ~|alu_out;
                         end
                         F3_NE: begin
                             alu_modifier = 1;
-                            flush_pipeline = |alu_out;
+                            branch = |alu_out;
                         end
                         F3_LT: begin
                             alu_funct3 = F3_SLT;
-                            flush_pipeline = |alu_out;
+                            branch = |alu_out;
                         end
                         F3_GE: begin
                             alu_funct3 = F3_SLT;
-                            flush_pipeline = ~|alu_out;
+                            branch = ~|alu_out;
                         end
                         F3_LTU: begin
                             alu_funct3 = F3_SLTU;
-                            flush_pipeline = |alu_out;
+                            branch = |alu_out;
                         end
                         F3_GE: begin
                             alu_funct3 = F3_SLTU;
-                            flush_pipeline = ~|alu_out;
+                            branch = ~|alu_out;
                         end
                     endcase
                 end
