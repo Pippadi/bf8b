@@ -78,17 +78,14 @@ always @ (*) begin
             imm = imms;
     endcase
 
-    aux_adder_in1 = 0;
-    aux_adder_in2 = 0;
-
     case (op)
         OP_JALR, OP_LOAD, OP_STORE: begin
             aux_adder_in1 = rs1;
             aux_adder_in2 = imm;
         end
         OP_JAL, OP_BRANCH: begin
-            aux_adder_in1 = imm;
-            aux_adder_in2 = pc;
+            aux_adder_in1 = pc;
+            aux_adder_in2 = imm;
         end
         default: begin
             aux_adder_in1 = 0;
