@@ -293,6 +293,29 @@ mem_if #(
     .mem_we_outs(wes)
 );
 
+reg need_branch_prediction;
+reg predict_req;
+wire take_branch, predict_ready;
+module branch_predictor
+#(
+    .ADDR_WIDTH(M_WIDTH),
+    .PREDICT_WIDTH(2),
+    .TARGET_CACHE_SIZE(8),
+    .DEFAULT_PREDICTION(2'b10) // Weakly taken
+) (
+    .rst(rst),
+    .clk(clk),
+
+    .predict_req(predict_req),
+    .inst_addr_in(decode_inst),
+    .take(take_branch),
+    .predict_ready(predict_ready),
+
+    .result_available,
+    .result_inst_addr,
+    .result_taken
+);
+
 reg fetch_should_start;
 reg decode_should_start;
 reg exec_should_start;
@@ -316,6 +339,27 @@ always @ (*) begin
     (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
 end
 
+reg stall_fetch, stall_fetch_next;
+reg predict_cycle;
+
+always @ (posedge clk) begin
+    if (rst) begin
+        predict_cycle <= 0;
+        predict_req <= 0;
+    end else begin
+        if (need_branch_prediction) begin
+            if (predict_cycle == 0) begin
+                    predict_cycle <= predict_ready ? 1 : 0;
+                    predict_req <= 1;
+                end else
+                    predict_req <= 0;
+        end else begin
+            predict_cycle <= 0;
+            predict_req <= 0;
+        end
+    end
+end
+
 always @ (*) begin
     pc_next = pc;
 
@@ -327,14 +371,39 @@ always @ (*) begin
     end
 
     decode_en_next = decode_en;
+    stall_fetch_next = stall_fetch;
+    if (decode_state == STATE_COMPLETE && stall_fetch) begin
+        pc_next = decode_addr_out;
+        stall_fetch_next = 0;
+        fetch_en_next = 0;
+        stall_fetch_next = 0;
+        decode_en_next = 0;
+        decode_pc_next = fetch_pc;
+    end
+
     decode_inst_next = decode_inst;
     decode_pc_next = decode_pc;
     if (decode_should_start) begin
-        decode_en_next = 1;
-        decode_inst_next = fetch_inst;
-        decode_pc_next = fetch_pc;
-        fetch_en_next = 0;
-        pc_next = pc + (INST_WIDTH / 8);
+        if (decode_inst[OP_WIDTH-1:0] == OP_BRANCH) begin
+            if (predict_cycle == 1) begin
+                need_branch_prediction = 0;
+                decode_en_next = 1;
+                decode_inst_next = fetch_inst;
+                decode_pc_next = fetch_pc;
+                if (take_branch) begin
+                    stall_fetch_next = 1;
+                end else
+                    pc_next = pc + (INST_WIDTH / 8);
+            end else
+                need_branch_prediction = 1;
+        end else begin
+            need_branch_prediction = 0;
+            decode_en_next = 1;
+            decode_inst_next = fetch_inst;
+            decode_pc_next = fetch_pc;
+            fetch_en_next = 0;
+            pc_next = pc + (INST_WIDTH / 8);
+        end
     end
 
     exec_en_next = exec_en;
@@ -394,6 +463,7 @@ always @ (posedge clk) begin
 
         fetch_en <= 0;
         fetch_pc <= 0;
+        stall_fetch <= 0;
 
         decode_en <= 0;
         decode_inst <= 0;
@@ -419,6 +489,7 @@ always @ (posedge clk) begin
 
         fetch_en <= fetch_en_next;
         fetch_pc <= fetch_pc_next;
+        stall_fetch <= stall_fetch_next;
 
         decode_en <= decode_en_next;
         decode_inst <= decode_inst_next;
