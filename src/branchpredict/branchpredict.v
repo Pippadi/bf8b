@@ -42,7 +42,7 @@ cache #(
 ) PredictionCache (
     .rst(rst),
     .clk(clk),
-    .we(adjust_cache_we),
+    .we(prediction_cache_we),
     .addr(inst_addr),
     .data_in(new_prediction),
     .data_out(prediction),

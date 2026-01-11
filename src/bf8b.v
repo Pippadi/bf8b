@@ -74,6 +74,7 @@ fetch #(
 reg decode_en, decode_en_next;
 reg [INST_WIDTH-1:0] decode_inst, decode_inst_next;
 reg [M_WIDTH-1:0] decode_pc, decode_pc_next;
+reg decode_branch_prediction, decode_branch_prediction_next;
 wire decode_ready;
 wire [OP_WIDTH-1:0] decode_op;
 wire [REG_ADDR_WIDTH-1:0] decode_rd;
@@ -118,6 +119,7 @@ decode #(
 );
 
 reg exec_en, exec_en_next;
+reg exec_branch_prediction, exec_branch_prediction_next;
 reg [OP_WIDTH-1:0] exec_op, exec_op_next;
 reg [REG_ADDR_WIDTH-1:0] exec_wb_addr, exec_wb_addr_next;
 reg [M_WIDTH-1:0] exec_pc_in, exec_pc_in_next;
@@ -318,6 +320,13 @@ end
 
 reg predict_req, predict_req_next;
 wire take_branch, predict_ready;
+
+// High for one cycle when branch result is ready
+wire predictor_result_available = wb_should_start &&
+    (exec_op == OP_BRANCH || exec_op == OP_JAL || exec_op == OP_JALR);
+wire mispredict = exec_branch_prediction != exec_branch &&
+    (exec_op == OP_BRANCH || exec_op == OP_JAL || exec_op == OP_JALR);
+
 branch_predictor #(
     .ADDR_WIDTH(M_WIDTH),
     .PREDICT_WIDTH(2),
@@ -328,12 +337,12 @@ branch_predictor #(
     .clk(clk),
 
     .predict_req(predict_req),
-    .inst_addr_in(decode_inst),
+    .inst_addr_in(pc),
     .take(take_branch),
     .predict_ready(predict_ready),
 
-    .result_available(exec_branch && wb_should_start), // High for one cycle when branch result is ready
-    .result_inst_addr(exec_pc_out),
+    .result_available(predictor_result_available),
+    .result_inst_addr(exec_pc_in),
     .result_taken(exec_branch)
 );
 
@@ -362,6 +371,7 @@ always @ (*) begin
     predict_req_next = 0;
     decode_inst_next = decode_inst;
     decode_pc_next = decode_pc;
+    decode_branch_prediction_next = decode_branch_prediction;
     if (decode_should_start) begin
         if (fetch_inst[OP_WIDTH-1:0] == OP_BRANCH ||
             fetch_inst[OP_WIDTH-1:0] == OP_JAL ||
@@ -370,9 +380,10 @@ always @ (*) begin
                 decode_en_next = 1;
                 decode_inst_next = fetch_inst;
                 decode_pc_next = fetch_pc;
-                if (take_branch) begin
+                decode_branch_prediction_next = take_branch;
+                if (take_branch)
                     stall_fetch_next = 1;
-                end else
+                else
                     pc_next = pc + (INST_WIDTH / 8);
             end else
                 predict_req_next = 1;
@@ -386,6 +397,7 @@ always @ (*) begin
     end
 
     exec_en_next = exec_en;
+    exec_branch_prediction_next = exec_branch_prediction;
     exec_op_next = exec_op;
     exec_pc_in_next = exec_pc_in;
     exec_wb_addr_next = exec_wb_addr;
@@ -397,6 +409,7 @@ always @ (*) begin
     exec_funct7_next = exec_funct7;
     if (exec_should_start) begin
         exec_en_next = 1;
+        exec_branch_prediction_next = decode_branch_prediction;
         exec_op_next = decode_op;
         exec_pc_in_next = decode_pc;
         exec_wb_addr_next = decode_rd;
@@ -420,14 +433,16 @@ always @ (*) begin
         wb_reg_addr_next = exec_wb_addr;
         wb_val_next = exec_val_out;
         wb_en_next = 1;
-        exec_en_next = 0;
-        if (exec_branch) begin
-            if (decode_pc != exec_pc_out) begin // misprediction
-                fetch_en_next = 0;
-                decode_en_next = 0;
-                pc_next = exec_pc_out;
-            end
-            exec_en_next = 1; // Keep execute in STATE_COMPLETE to stall and retain values
+
+        // If branching, keep execute in STATE_COMPLETE to stall and retain values
+        exec_en_next = exec_branch;
+
+        // Check for misprediction. Comparing with `pc` because
+        // `decode_pc` would not have been updated yet.
+        if (mispredict) begin
+            fetch_en_next = 0;
+            decode_en_next = 0;
+            pc_next = exec_branch ? exec_pc_out : (exec_pc_in + (INST_WIDTH / 8));
         end
     end
 
@@ -450,8 +465,10 @@ always @ (posedge clk) begin
         decode_en <= 0;
         decode_inst <= 0;
         decode_pc <= 0;
+        decode_branch_prediction <= 0;
 
         exec_en <= 0;
+        exec_branch_prediction <= 0;
         exec_op <= 0;
         exec_pc_in <= 0;
         exec_wb_addr <= 0;
@@ -477,8 +494,10 @@ always @ (posedge clk) begin
         decode_en <= decode_en_next;
         decode_inst <= decode_inst_next;
         decode_pc <= decode_pc_next;
+        decode_branch_prediction <= decode_branch_prediction_next;
 
         exec_en <= exec_en_next;
+        exec_branch_prediction <= exec_branch_prediction_next;
         exec_op <= exec_op_next;
         exec_pc_in <= exec_pc_in_next;
         exec_wb_addr <= exec_wb_addr_next;

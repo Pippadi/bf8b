@@ -69,6 +69,10 @@ initial begin
         $dumpvars(0, BF8B.Fetch.ICache.ShiftReg.q[i]);
     end
 
+    for (i = 0; i < 8; i = i + 1) begin
+        $dumpvars(0, BF8B.BranchPredictor.PredictionCache.ShiftReg.q[i]);
+    end
+
     clk = 0;
     fork
         begin
@@ -85,10 +89,10 @@ initial begin
             end
         end
 
-	begin
-	    #10000 $display("Timeout");
-	    $finish;
-    end
+        begin
+            #10000 $display("Timeout");
+            $finish;
+        end
     join
 end
 
