@@ -115,13 +115,7 @@ always @ (*) begin
                     alu_in1 = imm;
                     alu_in2 = pc_in;
                 end
-                OP_JAL: begin
-                    alu_in1 = 4;
-                    alu_in2 = pc_in;
-                    pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
-                    branch = 1;
-                end
-                OP_JALR: begin
+                OP_JAL, OP_JALR: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
                     pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
@@ -142,7 +136,7 @@ always @ (*) begin
                 OP_BRANCH: begin
                     alu_in1 = rs1;
                     alu_in2 = rs2;
-                    pc_out = addr_in;
+                    pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
                     case (funct3)
                         F3_EQ: begin
                             alu_modifier = 1;

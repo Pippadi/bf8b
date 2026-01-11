@@ -322,10 +322,8 @@ reg predict_req, predict_req_next;
 wire take_branch, predict_ready;
 
 // High for one cycle when branch result is ready
-wire predictor_result_available = wb_should_start &&
-    (exec_op == OP_BRANCH || exec_op == OP_JAL || exec_op == OP_JALR);
-wire mispredict = exec_branch_prediction != exec_branch &&
-    (exec_op == OP_BRANCH || exec_op == OP_JAL || exec_op == OP_JALR);
+wire predictor_result_available = wb_should_start && exec_op == OP_BRANCH;
+wire mispredict = exec_branch_prediction != exec_branch && exec_op == OP_BRANCH;
 
 branch_predictor #(
     .ADDR_WIDTH(M_WIDTH),
@@ -373,27 +371,34 @@ always @ (*) begin
     decode_pc_next = decode_pc;
     decode_branch_prediction_next = decode_branch_prediction;
     if (decode_should_start) begin
-        if (fetch_inst[OP_WIDTH-1:0] == OP_BRANCH ||
-            fetch_inst[OP_WIDTH-1:0] == OP_JAL ||
-            fetch_inst[OP_WIDTH-1:0] == OP_JALR) begin
-            if (predict_ready) begin
+        case (fetch_inst[OP_WIDTH-1:0])
+            OP_BRANCH: begin
+                if (predict_ready) begin
+                    decode_en_next = 1;
+                    decode_inst_next = fetch_inst;
+                    decode_pc_next = fetch_pc;
+                    decode_branch_prediction_next = take_branch;
+                    if (take_branch)
+                        stall_fetch_next = 1;
+                    else
+                        pc_next = pc + (INST_WIDTH / 8);
+                end else
+                    predict_req_next = 1;
+            end
+            OP_JAL, OP_JALR: begin
                 decode_en_next = 1;
                 decode_inst_next = fetch_inst;
                 decode_pc_next = fetch_pc;
-                decode_branch_prediction_next = take_branch;
-                if (take_branch)
-                    stall_fetch_next = 1;
-                else
-                    pc_next = pc + (INST_WIDTH / 8);
-            end else
-                predict_req_next = 1;
-        end else begin
-            decode_en_next = 1;
-            decode_inst_next = fetch_inst;
-            decode_pc_next = fetch_pc;
-            fetch_en_next = 0;
-            pc_next = pc + (INST_WIDTH / 8);
-        end
+                stall_fetch_next = 1;
+            end
+            default: begin
+                decode_en_next = 1;
+                decode_inst_next = fetch_inst;
+                decode_pc_next = fetch_pc;
+                fetch_en_next = 0;
+                pc_next = pc + (INST_WIDTH / 8);
+            end
+        endcase
     end
 
     exec_en_next = exec_en;
