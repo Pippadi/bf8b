@@ -97,8 +97,9 @@ instruction_decode #(
     .OP_INTEGER_IMM(OP_INTEGER_IMM),
     .OP_INTEGER(OP_INTEGER)
 ) InstructionDecode (
-    .en(idec_en),
+    .rst(rst),
     .clk(clk),
+    .en(idec_en),
     .inst(idec_inst),
     .op(idec_op),
     .rd_addr(idec_rd_addr),
@@ -141,6 +142,7 @@ operand_decode #(
     .OP_INTEGER(OP_INTEGER)
 ) OperandDecode (
     .en(opdec_en),
+    .rst(rst),
     .clk(clk),
     .imm(opdec_imm),
     .rs1_addr(opdec_rs1_addr),
@@ -197,8 +199,9 @@ exec #(
     .MEM_ACC_16(MEM_ACC_16),
     .MEM_ACC_32(MEM_ACC_32)
 ) Execute (
-    .en(exec_en),
+    .rst(rst),
     .clk(clk),
+    .en(exec_en),
     .pc_in(exec_pc_in),
     .op(exec_op),
     .rs1(exec_rs1_in),
@@ -346,12 +349,12 @@ always @ (*) begin
     opdec_should_start =
         idec_state == STATE_COMPLETE &&
         opdec_state == STATE_IDLE &&
-        !((exec_state == STATE_BUSY &&
-        exec_rd_addr == idec_rs1_addr ||
-        exec_rd_addr == idec_rs2_addr) &&
+        !(((exec_state == STATE_COMPLETE || exec_state == STATE_BUSY) &&
+        (exec_rd_addr == idec_rs1_addr ||
+        exec_rd_addr == idec_rs2_addr)) ||
         (wb_state == STATE_BUSY &&
-        wb_rd_addr == idec_rs1_addr ||
-        wb_rd_addr == idec_rs1_addr));
+        (wb_rd_addr == idec_rs1_addr ||
+        wb_rd_addr == idec_rs1_addr)));
 
     exec_should_start =
         opdec_state == STATE_COMPLETE &&
@@ -426,8 +429,8 @@ always @ (*) begin
     opdec_op_next = opdec_op;
     opdec_imm_next = opdec_imm;
     opdec_rd_addr_next = opdec_rd_addr;
-    opdec_rs1_addr_next = opdec_rs1;
-    opdec_rs2_addr_next = opdec_rs2;
+    opdec_rs1_addr_next = opdec_rs1_addr;
+    opdec_rs2_addr_next = opdec_rs2_addr;
     opdec_funct7_next = opdec_funct7;
     opdec_funct3_next = opdec_funct3;
     opdec_branch_prediction_next = opdec_branch_prediction;
@@ -440,7 +443,6 @@ always @ (*) begin
                     opdec_op_next = idec_op;
                     opdec_imm_next = idec_imm;
                     opdec_rd_addr_next = idec_rd_addr;
-                    opdec_rs1_addr_next = idec_rd_addr;
                     opdec_rs1_addr_next = idec_rs1_addr;
                     opdec_rs2_addr_next = idec_rs2_addr;
                     opdec_funct7_next = idec_funct7;

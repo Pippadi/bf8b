@@ -15,8 +15,9 @@ module instruction_decode
     parameter OP_INTEGER = 7'b0110011
 )
 (
-    input en,
+    input rst,
     input clk,
+    input en,
     input [INST_WIDTH-1:0] inst,
     output reg [OP_WIDTH-1:0] op,
     output reg [REG_ADDR_WIDTH-1:0] rd_addr,
@@ -28,16 +29,9 @@ module instruction_decode
     output reg ready
 );
 
-reg [M_WIDTH-1:0] imms, immi, immb, immu, immj;
+reg [M_WIDTH-1:0] imms, immi, immb, immu, immj, imm_temp;
 
 always @ (*) begin
-    op = inst[6:0];
-    funct7 = inst[31:25];
-    funct3 = inst[14:12];
-    rd_addr = inst[11:7];
-    rs1_addr = inst[19:15];
-    rs2_addr = inst[24:20];
-
     imms = {{21{inst[31]}}, inst[30:25], inst[11:7]};
     immi = {{21{inst[31]}}, inst[30:20]};
     immb = {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
@@ -46,20 +40,40 @@ always @ (*) begin
 
     case (op)
         OP_LUI, OP_AUIPC:
-            imm = immu;
+            imm_temp = immu;
         OP_JAL:
-            imm = immj;
+            imm_temp = immj;
         OP_JALR, OP_LOAD, OP_INTEGER_IMM:
-            imm = immi;
+            imm_temp = immi;
         OP_BRANCH:
-            imm = immb;
+            imm_temp = immb;
         default:
-            imm = imms;
+            imm_temp = imms;
     endcase
 end
 
 always @ (posedge clk) begin
-    ready <= en;
+    if (rst) begin
+        ready <= 0;
+        op <= 0;
+        funct7 <= 0;
+        funct3 <= 0;
+        rd_addr <= 0;
+        rs1_addr <= 0;
+        rs2_addr <= 0;
+        imm <= 0;
+    end else begin
+        ready <= en;
+        if (en) begin
+            op <= inst[6:0];
+            funct7 <= inst[31:25];
+            funct3 <= inst[14:12];
+            rd_addr <= inst[11:7];
+            rs1_addr <= inst[19:15];
+            rs2_addr <= inst[24:20];
+            imm <= imm_temp;
+        end
+    end
 end
 
 endmodule

@@ -30,8 +30,9 @@ module exec
     parameter MEM_ACC_32 = 2'b10
 )
 (
-    input en,
+    input rst,
     input clk,
+    input en,
     input [OP_WIDTH-1:0] op,
     input [6:0] funct7,
     input [2:0] funct3,
@@ -76,17 +77,18 @@ alu #(
     .out(alu_out)
 );
 
-reg [M_WIDTH-1:0] val_temp;
+reg [M_WIDTH-1:0] val_temp, pc_out_temp;
+reg branch_temp;
 reg cycle;
 
 always @ (*) begin
-    branch = 0;
+    branch_temp = 0;
     alu_modifier = 0;
     val_temp = alu_out;
     alu_in1 = 0;
     alu_in2 = 0;
     alu_funct3 = F3_ADD;
-    pc_out = pc_in;
+    pc_out_temp = pc_in;
     mem_req = 0;
     mem_addr = 0;
     mem_we = 0;
@@ -118,8 +120,8 @@ always @ (*) begin
                 OP_JAL, OP_JALR: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
-                    pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
-                    branch = 1;
+                    pc_out_temp = {addr_in[M_WIDTH-1:1], 1'b0};
+                    branch_temp = 1;
                 end
                 OP_INTEGER_IMM: begin
                     alu_in1 = rs1;
@@ -136,31 +138,31 @@ always @ (*) begin
                 OP_BRANCH: begin
                     alu_in1 = rs1;
                     alu_in2 = rs2;
-                    pc_out = {addr_in[M_WIDTH-1:1], 1'b0};
+                    pc_out_temp = {addr_in[M_WIDTH-1:1], 1'b0};
                     case (funct3)
                         F3_EQ: begin
                             alu_modifier = 1;
-                            branch = ~|alu_out;
+                            branch_temp = ~|alu_out;
                         end
                         F3_NE: begin
                             alu_modifier = 1;
-                            branch = |alu_out;
+                            branch_temp = |alu_out;
                         end
                         F3_LT: begin
                             alu_funct3 = F3_SLT;
-                            branch = |alu_out;
+                            branch_temp = |alu_out;
                         end
                         F3_GE: begin
                             alu_funct3 = F3_SLT;
-                            branch = ~|alu_out;
+                            branch_temp = ~|alu_out;
                         end
                         F3_LTU: begin
                             alu_funct3 = F3_SLTU;
-                            branch = |alu_out;
+                            branch_temp = |alu_out;
                         end
                         F3_GE: begin
                             alu_funct3 = F3_SLTU;
-                            branch = ~|alu_out;
+                            branch_temp = ~|alu_out;
                         end
                     endcase
                 end
@@ -170,18 +172,27 @@ always @ (*) begin
 end
 
 always @ (posedge clk) begin
-    if (en) begin
-        if (op == OP_LOAD || op == OP_STORE) begin
-            if (cycle == 0 && mem_ready) begin
-                cycle <= 1;
-                val_out <= val_temp; // Latch value here, because garbage may be on mem_data_in next cycle
-            end
-        end else begin
-            val_out <= val_temp;
-            cycle <= 1;
-        end
-    end else
+    if (rst) begin
         cycle <= 0;
+        val_out <= 0;
+        pc_out <= 0;
+        branch <= 0;
+    end else begin
+        if (en) begin
+            pc_out <= pc_out_temp;
+            branch <= branch_temp;
+            if (op == OP_LOAD || op == OP_STORE) begin
+                if (cycle == 0 && mem_ready) begin
+                    cycle <= 1;
+                    val_out <= val_temp; // Latch value here, because garbage may be on mem_data_in next cycle
+                end
+            end else begin
+                val_out <= val_temp;
+                cycle <= 1;
+            end
+        end else
+            cycle <= 0;
+    end
 end
 
 endmodule

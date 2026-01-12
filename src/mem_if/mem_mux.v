@@ -48,11 +48,6 @@ integer j;
 
 always @ (*) begin
     if (rst) begin
-        mem_request = 0;
-        mem_data_out = 0;
-        mem_addr = 0;
-        mem_data_width = 0;
-        mem_we_out = 0;
         client_readies = 0;
         for (j = 0; j < CLIENT_CNT; j = j + 1) begin
             client_data_ins[j] = 0;
@@ -65,10 +60,6 @@ always @ (*) begin
                 mem_mux_holder_temp = j;
         end
 
-        mem_data_out = client_data_outs[mem_mux_holder];
-        mem_addr = client_addrs[mem_mux_holder];
-        mem_data_width = client_data_widths[mem_mux_holder];
-        mem_we_out = client_wes[mem_mux_holder];
         client_readies[mem_mux_holder] = mem_ready;
         client_data_ins[mem_mux_holder] = mem_data_in;
 
@@ -91,10 +82,18 @@ always @ (posedge clk) begin
     if (rst) begin
         mem_mux_holder <= 0;
         cycle <= 0;
+        mem_data_out <= 0;
+        mem_addr <= 0;
+        mem_data_width <= 0;
+        mem_we_out <= 0;
     end else begin
         case (cycle)
             0: if (client_requests) begin
                 mem_mux_holder <= mem_mux_holder_temp;
+                mem_data_out = client_data_outs[mem_mux_holder_temp];
+                mem_addr = client_addrs[mem_mux_holder_temp];
+                mem_data_width = client_data_widths[mem_mux_holder_temp];
+                mem_we_out = client_wes[mem_mux_holder_temp];
                 cycle <= 1;
             end
             1: cycle <= mem_ready ? 2 : 1;

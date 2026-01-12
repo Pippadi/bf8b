@@ -76,7 +76,6 @@ reg [BANK_SEL_WIDTH-1:0] shift_amt_hi;
 always @ (*) begin
     if (rst) begin
         mem_we_outs = 0;
-        mem_addr = 0;
         mem_data_out = 0;
         client_ready = 0;
         shift_amt_temp = 0;
@@ -84,7 +83,6 @@ always @ (*) begin
         single_cycle_acc = 0;
     end else begin
         mem_we_outs = 0;
-        mem_addr = client_addr[M_WIDTH-1:BANK_SEL_WIDTH];
 
         shift_amt_temp = client_addr[BANK_SEL_WIDTH-1:0];
         shift_amt_hi = ~shift_amt_lo + 1;
@@ -130,17 +128,20 @@ end
 always @ (posedge clk) begin
     if (rst) begin
         mem_cycle <= MEM_IDLE;
+        mem_addr <= 0;
         hi_data_in <= 0;
         client_data_in <= 0;
         shift_amt_lo <= 0;
     end else begin
         case (mem_cycle)
-            MEM_IDLE: begin
+            default: begin
                 hi_data_in <= 0;
                 client_data_in <= 0;
                 shift_amt_lo <= shift_amt_temp;
-                if (client_request)
+                if (client_request) begin
                     mem_cycle <= single_cycle_acc ? MEM_ACC_L_1 : MEM_ACC_H_1;
+                    mem_addr <= client_addr[M_WIDTH-1:BANK_SEL_WIDTH];
+                end
             end
 
             MEM_ACC_H_1: mem_cycle <= MEM_ACC_H_2;
