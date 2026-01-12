@@ -143,8 +143,11 @@ assign rx_ptr_rst = reg_req & reg_we &
 always @ (posedge clk) begin
     if (rst) begin
         tx_en <= 0;
+        rx_en <= 0;
         tx_dma_buf_start <= 0;
         tx_dma_buf_end <= 0;
+        rx_dma_buf_start <= 0;
+        rx_dma_buf_end <= 0;
         reg_data_out <= 0;
         reg_ready <= 0;
     end else begin
