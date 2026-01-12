@@ -85,7 +85,6 @@ wire [1:0] idec_state = {idec_en, idec_ready};
 instruction_decode #(
     .M_WIDTH(M_WIDTH),
     .OP_WIDTH(OP_WIDTH),
-    .REG_CNT(REG_CNT),
     .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
     .INST_WIDTH(INST_WIDTH),
     .OP_LUI(OP_LUI),
@@ -115,12 +114,14 @@ reg opdec_en, opdec_en_next;
 wire opdec_ready;
 reg [M_WIDTH-1:0] opdec_pc, opdec_pc_next;
 reg opdec_branch_prediction, opdec_branch_prediction_next;
-reg [OP_WIDTH-1:0] opdec_op;
-reg [REG_ADDR_WIDTH-1:0] opdec_rd;
-wire [M_WIDTH-1:0] opdec_rs1, opdec_rs2;
+reg [OP_WIDTH-1:0] opdec_op, opdec_op_next;
+reg [M_WIDTH-1:0] opdec_imm, opdec_imm_next;
+reg [REG_ADDR_WIDTH-1:0] opdec_rd_addr, opdec_rd_addr_next;
+reg [REG_ADDR_WIDTH-1:0] opdec_rs1_addr, opdec_rs1_addr_next, opdec_rs2_addr, opdec_rs2_addr_next;
 wire [M_WIDTH-1:0] opdec_immaddr;
-reg [6:0] opdec_funct7;
-reg [2:0] opdec_funct3;
+wire [M_WIDTH-1:0] opdec_rs1, opdec_rs2;
+reg [6:0] opdec_funct7, opdec_funct7_next;
+reg [2:0] opdec_funct3, opdec_funct3_next;
 
 wire [1:0] opdec_state = {opdec_en, opdec_ready};
 
@@ -142,20 +143,21 @@ operand_decode #(
     .en(opdec_en),
     .clk(clk),
     .imm(opdec_imm),
+    .rs1_addr(opdec_rs1_addr),
+    .rs2_addr(opdec_rs2_addr),
     .pc(opdec_pc),
     .reg_file_packed(reg_file_packed),
     .op(opdec_op),
-    .rd(opdec_rd),
     .rs1(opdec_rs1),
     .rs2(opdec_rs2),
-    .immaddr(opdec_imaddr),
+    .immaddr(opdec_immaddr),
     .ready(opdec_ready)
 );
 
 reg exec_en, exec_en_next;
 reg exec_branch_prediction, exec_branch_prediction_next;
 reg [OP_WIDTH-1:0] exec_op, exec_op_next;
-reg [REG_ADDR_WIDTH-1:0] exec_wb_addr, exec_wb_addr_next;
+reg [REG_ADDR_WIDTH-1:0] exec_rd_addr, exec_rd_addr_next;
 reg [M_WIDTH-1:0] exec_pc_in, exec_pc_in_next;
 reg [M_WIDTH-1:0] exec_rs1_in, exec_rs1_in_next;
 reg [M_WIDTH-1:0] exec_rs2_in, exec_rs2_in_next;
@@ -221,7 +223,7 @@ exec #(
 reg wb_en, wb_en_next;
 reg [6:0] wb_op, wb_op_next;
 reg [M_WIDTH-1:0] wb_val, wb_val_next;
-reg [REG_ADDR_WIDTH-1:0] wb_reg_addr, wb_reg_addr_next;
+reg [REG_ADDR_WIDTH-1:0] wb_rd_addr, wb_rd_addr_next;
 reg [2:0] wb_funct3, wb_funct3_next;
 wire wb_ready;
 wire [1:0] wb_state;
@@ -249,7 +251,7 @@ writeback #(
     .en(wb_en),
     .op(wb_op),
     .funct3(wb_funct3),
-    .reg_addr(wb_reg_addr),
+    .reg_addr(wb_rd_addr),
     .val(wb_val),
     .regs(reg_file_packed),
     .ready(wb_ready)
@@ -343,7 +345,13 @@ always @ (*) begin
 
     opdec_should_start =
         idec_state == STATE_COMPLETE &&
-        opdec_state == STATE_IDLE;
+        opdec_state == STATE_IDLE &&
+        !((exec_state == STATE_BUSY &&
+        exec_rd_addr == idec_rs1_addr ||
+        exec_rd_addr == idec_rs2_addr) &&
+        (wb_state == STATE_BUSY &&
+        wb_rd_addr == idec_rs1_addr ||
+        wb_rd_addr == idec_rs1_addr));
 
     exec_should_start =
         opdec_state == STATE_COMPLETE &&
@@ -383,7 +391,7 @@ branch_predictor #(
     .result_taken(exec_branch)
 );
 
-reg stall_fetch_ipdec, stall_fetch_ipdec_next;
+reg stall_fetch_idec, stall_fetch_idec_next;
 
 always @ (*) begin
     pc_next = pc;
@@ -404,10 +412,10 @@ always @ (*) begin
         idec_pc_next = fetch_pc;
     end
 
-    stall_fetch_ipdec_next = stall_fetch_ipdec;
-    if (opdec_state == STATE_COMPLETE && stall_fetch_ipdec) begin
+    stall_fetch_idec_next = stall_fetch_idec;
+    if (opdec_state == STATE_COMPLETE && stall_fetch_idec) begin
         pc_next = opdec_immaddr;
-        stall_fetch_ipdec_next = 0;
+        stall_fetch_idec_next = 0;
         fetch_en_next = 0;
         idec_en_next = 0;
     end
@@ -415,17 +423,31 @@ always @ (*) begin
     predict_req_next = 0;
     opdec_en_next = opdec_en;
     opdec_pc_next = opdec_pc;
+    opdec_op_next = opdec_op;
+    opdec_imm_next = opdec_imm;
+    opdec_rd_addr_next = opdec_rd_addr;
+    opdec_rs1_addr_next = opdec_rs1;
+    opdec_rs2_addr_next = opdec_rs2;
+    opdec_funct7_next = opdec_funct7;
+    opdec_funct3_next = opdec_funct3;
     opdec_branch_prediction_next = opdec_branch_prediction;
     if (opdec_should_start) begin
         case (idec_op)
             OP_BRANCH: begin
                 if (predict_ready) begin
                     opdec_en_next = 1;
-                    opdec_inst_next = fetch_inst;
-                    opdec_pc_next = fetch_pc;
+                    opdec_pc_next = idec_pc;
+                    opdec_op_next = idec_op;
+                    opdec_imm_next = idec_imm;
+                    opdec_rd_addr_next = idec_rd_addr;
+                    opdec_rs1_addr_next = idec_rd_addr;
+                    opdec_rs1_addr_next = idec_rs1_addr;
+                    opdec_rs2_addr_next = idec_rs2_addr;
+                    opdec_funct7_next = idec_funct7;
+                    opdec_funct3_next = idec_funct3;
                     opdec_branch_prediction_next = take_branch;
                     if (take_branch)
-                        stall_fetch_ipdec_next = 1;
+                        stall_fetch_idec_next = 1;
                     else
                         pc_next = pc + (INST_WIDTH / 8);
                 end else
@@ -433,15 +455,28 @@ always @ (*) begin
             end
             OP_JAL, OP_JALR: begin
                 opdec_en_next = 1;
-                opdec_inst_next = fetch_inst;
-                opdec_pc_next = fetch_pc;
-                stall_fetch_ipdec_next = 1;
+                opdec_pc_next = idec_pc;
+                opdec_op_next = idec_op;
+                opdec_imm_next = idec_imm;
+                opdec_rd_addr_next = idec_rd_addr;
+                opdec_rs1_addr_next = idec_rs1_addr;
+                opdec_rs2_addr_next = idec_rs2_addr;
+                opdec_funct7_next = idec_funct7;
+                opdec_funct3_next = idec_funct3;
+                stall_fetch_idec_next = 1;
             end
             default: begin
                 opdec_en_next = 1;
-                opdec_inst_next = fetch_inst;
-                opdec_pc_next = fetch_pc;
+                opdec_pc_next = idec_pc;
+                opdec_op_next = idec_op;
+                opdec_imm_next = idec_imm;
+                opdec_rd_addr_next = idec_rd_addr;
+                opdec_rs1_addr_next = idec_rs1_addr;
+                opdec_rs2_addr_next = idec_rs2_addr;
+                opdec_funct7_next = idec_funct7;
+                opdec_funct3_next = idec_funct3;
                 fetch_en_next = 0;
+                idec_en_next = 0;
                 pc_next = pc + (INST_WIDTH / 8);
             end
         endcase
@@ -451,7 +486,7 @@ always @ (*) begin
     exec_branch_prediction_next = exec_branch_prediction;
     exec_op_next = exec_op;
     exec_pc_in_next = exec_pc_in;
-    exec_wb_addr_next = exec_wb_addr;
+    exec_rd_addr_next = exec_rd_addr;
     exec_rs1_in_next = exec_rs1_in;
     exec_rs2_in_next = exec_rs2_in;
     exec_imm_in_next = exec_imm_in;
@@ -460,28 +495,28 @@ always @ (*) begin
     exec_funct7_next = exec_funct7;
     if (exec_should_start) begin
         exec_en_next = 1;
-        exec_branch_prediction_next = decode_branch_prediction;
-        exec_op_next = decode_op;
-        exec_pc_in_next = decode_pc;
-        exec_wb_addr_next = decode_rd;
-        exec_rs1_in_next = decode_rs1;
-        exec_rs2_in_next = decode_rs2;
-        exec_imm_in_next = decode_imm;
-        exec_addr_in_next = decode_addr_out;
-        exec_funct3_next = decode_funct3;
-        exec_funct7_next = decode_funct7;
-        decode_en_next = 0;
+        exec_branch_prediction_next = opdec_branch_prediction;
+        exec_op_next = opdec_op;
+        exec_pc_in_next = opdec_pc;
+        exec_rd_addr_next = opdec_rd_addr;
+        exec_rs1_in_next = opdec_rs1;
+        exec_rs2_in_next = opdec_rs2;
+        exec_imm_in_next = opdec_immaddr;
+        exec_addr_in_next = opdec_immaddr;
+        exec_funct3_next = opdec_funct3;
+        exec_funct7_next = opdec_funct7;
+        opdec_en_next = 0;
     end
 
     wb_en_next = wb_en;
     wb_op_next = wb_op;
     wb_funct3_next = wb_funct3;
-    wb_reg_addr_next = wb_reg_addr;
+    wb_rd_addr_next = wb_rd_addr;
     wb_val_next = wb_val;
     if (wb_should_start) begin
         wb_op_next = exec_op;
         wb_funct3_next = exec_funct3;
-        wb_reg_addr_next = exec_wb_addr;
+        wb_rd_addr_next = exec_rd_addr;
         wb_val_next = exec_val_out;
         wb_en_next = 1;
 
@@ -490,7 +525,8 @@ always @ (*) begin
 
         if (mispredict) begin
             fetch_en_next = 0;
-            decode_en_next = 0;
+            idec_en_next = 0;
+            opdec_en_next = 0;
             pc_next = exec_branch ? exec_pc_out : (exec_pc_in + (INST_WIDTH / 8));
         end
     end
@@ -508,7 +544,7 @@ always @ (posedge clk) begin
 
         fetch_en <= 0;
         fetch_pc <= 0;
-        stall_fetch_ipdec <= 0;
+        stall_fetch_idec <= 0;
 
         predict_req <= 0;
 
@@ -517,15 +553,21 @@ always @ (posedge clk) begin
         idec_pc <= 0;
 
         opdec_en <= 0;
-        opdec_inst <= 0;
         opdec_pc <= 0;
+        opdec_op <= 0;
+        opdec_imm <= 0;
+        opdec_rd_addr <= 0;
+        opdec_rs1_addr <= 0;
+        opdec_rs2_addr <= 0;
+        opdec_funct7 <= 0;
+        opdec_funct3 <= 0;
         opdec_branch_prediction <= 0;
 
         exec_en <= 0;
         exec_branch_prediction <= 0;
         exec_op <= 0;
         exec_pc_in <= 0;
-        exec_wb_addr <= 0;
+        exec_rd_addr <= 0;
         exec_rs1_in <= 0;
         exec_rs2_in <= 0;
         exec_imm_in <= 0;
@@ -535,14 +577,14 @@ always @ (posedge clk) begin
         wb_en <= 0;
         wb_op <= 0;
         wb_funct3 <= 0;
-        wb_reg_addr <= 0;
+        wb_rd_addr <= 0;
         wb_val <= 0;
     end else begin
         pc <= pc_next;
 
         fetch_en <= fetch_en_next;
         fetch_pc <= fetch_pc_next;
-        stall_fetch_ipdec <= stall_fetch_ipdec_next;
+        stall_fetch_idec <= stall_fetch_idec_next;
 
         predict_req <= predict_req_next;
 
@@ -551,15 +593,21 @@ always @ (posedge clk) begin
         idec_pc <= idec_pc_next;
 
         opdec_en <= opdec_en_next;
-        opdec_inst <= opdec_inst_next;
         opdec_pc <= opdec_pc_next;
+        opdec_op <= opdec_op_next;
+        opdec_imm <= opdec_imm_next;
+        opdec_rd_addr <= opdec_rd_addr_next;
+        opdec_rs1_addr <= opdec_rs1_addr_next;
+        opdec_rs2_addr <= opdec_rs2_addr_next;
+        opdec_funct7 <= opdec_funct7_next;
+        opdec_funct3 <= opdec_funct3_next;
         opdec_branch_prediction <= opdec_branch_prediction_next;
 
         exec_en <= exec_en_next;
         exec_branch_prediction <= exec_branch_prediction_next;
         exec_op <= exec_op_next;
         exec_pc_in <= exec_pc_in_next;
-        exec_wb_addr <= exec_wb_addr_next;
+        exec_rd_addr <= exec_rd_addr_next;
         exec_rs1_in <= exec_rs1_in_next;
         exec_rs2_in <= exec_rs2_in_next;
         exec_imm_in <= exec_imm_in_next;
@@ -570,7 +618,7 @@ always @ (posedge clk) begin
         wb_en <= wb_en_next;
         wb_op <= wb_op_next;
         wb_funct3 <= wb_funct3_next;
-        wb_reg_addr <= wb_reg_addr_next;
+        wb_rd_addr <= wb_rd_addr_next;
         wb_val <= wb_val_next;
     end
 end

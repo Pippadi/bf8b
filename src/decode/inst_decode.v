@@ -2,6 +2,7 @@ module instruction_decode
 #(
     parameter M_WIDTH = 32,
     parameter OP_WIDTH = 7,
+    parameter REG_ADDR_WIDTH = 5,
     parameter INST_WIDTH = 32,
     parameter OP_LUI = 7'b0110111,
     parameter OP_AUIPC = 7'b0010111,
@@ -22,8 +23,8 @@ module instruction_decode
     output reg [M_WIDTH-1:0] imm,
     output reg [2:0] funct3,
     output reg [6:0] funct7,
-    output reg [M_WIDTH-1:0] rs1_addr,
-    output reg [M_WIDTH-1:0] rs2_addr,
+    output reg [REG_ADDR_WIDTH-1:0] rs1_addr,
+    output reg [REG_ADDR_WIDTH-1:0] rs2_addr,
     output reg ready
 );
 

@@ -21,11 +21,13 @@ module operand_decode
     input [OP_WIDTH-1:0] op,
     input [M_WIDTH-1:0] pc,
     input [M_WIDTH-1:0] imm,
+    input [REG_ADDR_WIDTH-1:0] rs1_addr,
+    input [REG_ADDR_WIDTH-1:0] rs2_addr,
     output reg [M_WIDTH-1:0] immaddr,
-    output reg [M_WIDTH-1:0] rs1,
-    output reg [M_WIDTH-1:0] rs2,
+    output wire [M_WIDTH-1:0] rs1,
+    output wire [M_WIDTH-1:0] rs2,
     output reg ready
-)
+);
 
 assign rs1 = reg_file_packed[M_WIDTH*rs1_addr +: M_WIDTH];
 assign rs2 = reg_file_packed[M_WIDTH*rs2_addr +: M_WIDTH];
@@ -43,19 +45,21 @@ adder #(
 );
 
 always @ (*) begin
-    assign addr = aux_adder_out;
     case (op)
         OP_JALR, OP_LOAD, OP_STORE: begin
             aux_adder_in1 = rs1;
             aux_adder_in2 = imm;
+            immaddr = aux_adder_out;
         end
         OP_JAL, OP_BRANCH: begin
             aux_adder_in1 = pc;
             aux_adder_in2 = imm;
+            immaddr = aux_adder_out;
         end
         default: begin
             aux_adder_in1 = 0;
             aux_adder_in2 = 0;
+            immaddr = imm;
         end
     endcase
 end
