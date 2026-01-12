@@ -39,8 +39,7 @@ module exec
     input [M_WIDTH-1:0] pc_in,
     input [M_WIDTH-1:0] rs1,
     input [M_WIDTH-1:0] rs2,
-    input [M_WIDTH-1:0] imm,
-    input [M_WIDTH-1:0] addr_in,
+    input [M_WIDTH-1:0] imm_addr,
     input [M_WIDTH-1:0] mem_data_in,
     input mem_ready,
     output reg [M_WIDTH-1:0] pc_out,
@@ -99,7 +98,7 @@ always @ (*) begin
     if (en) begin
         if (op == OP_LOAD || op == OP_STORE) begin
             if (cycle == 0) begin
-                mem_addr = addr_in;
+                mem_addr = imm_addr;
                 mem_we = op == OP_STORE;
                 mem_data_out = rs2;
                 mem_req = 1;
@@ -110,22 +109,22 @@ always @ (*) begin
         else begin
             case (op)
                 OP_LUI: begin
-                    alu_in1 = imm;
+                    alu_in1 = imm_addr;
                     alu_in2 = 0;
                 end
                 OP_AUIPC: begin
-                    alu_in1 = imm;
+                    alu_in1 = imm_addr;
                     alu_in2 = pc_in;
                 end
                 OP_JAL, OP_JALR: begin
                     alu_in1 = 4;
                     alu_in2 = pc_in;
-                    pc_out_temp = {addr_in[M_WIDTH-1:1], 1'b0};
+                    pc_out_temp = {imm_addr[M_WIDTH-1:1], 1'b0};
                     branch_temp = 1;
                 end
                 OP_INTEGER_IMM: begin
                     alu_in1 = rs1;
-                    alu_in2 = imm;
+                    alu_in2 = imm_addr;
                     alu_funct3 = funct3;
                     alu_modifier = 0;
                 end
@@ -138,7 +137,7 @@ always @ (*) begin
                 OP_BRANCH: begin
                     alu_in1 = rs1;
                     alu_in2 = rs2;
-                    pc_out_temp = {addr_in[M_WIDTH-1:1], 1'b0};
+                    pc_out_temp = {imm_addr[M_WIDTH-1:1], 1'b0};
                     case (funct3)
                         F3_EQ: begin
                             alu_modifier = 1;

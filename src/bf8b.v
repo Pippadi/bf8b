@@ -163,8 +163,7 @@ reg [REG_ADDR_WIDTH-1:0] exec_rd_addr, exec_rd_addr_next;
 reg [M_WIDTH-1:0] exec_pc_in, exec_pc_in_next;
 reg [M_WIDTH-1:0] exec_rs1_in, exec_rs1_in_next;
 reg [M_WIDTH-1:0] exec_rs2_in, exec_rs2_in_next;
-reg [M_WIDTH-1:0] exec_imm_in, exec_imm_in_next;
-reg [M_WIDTH-1:0] exec_addr_in, exec_addr_in_next;
+reg [M_WIDTH-1:0] exec_imm_addr, exec_imm_addr_next;
 reg [2:0] exec_funct3, exec_funct3_next;
 reg [6:0] exec_funct7, exec_funct7_next;
 wire [M_WIDTH-1:0] exec_data_out;
@@ -206,8 +205,7 @@ exec #(
     .op(exec_op),
     .rs1(exec_rs1_in),
     .rs2(exec_rs2_in),
-    .imm(exec_imm_in),
-    .addr_in(exec_addr_in),
+    .imm_addr(exec_imm_addr),
     .funct3(exec_funct3),
     .funct7(exec_funct7),
     .mem_ready(exec_mem_ready),
@@ -276,8 +274,7 @@ wire [M_WIDTH-1:0] uart_rx_mem_data_in; // throwaway
 wire [M_WIDTH-1:0] uart_rx_mem_data_out;
 wire uart_rx_mem_ready;
 
-wire uart_selected;
-assign uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 6'h20);
+wire uart_selected = (exec_mem_addr >= UART_BASE_ADDR) && (exec_mem_addr < UART_BASE_ADDR + 6'h20);
 
 uart #(
     .M_WIDTH(M_WIDTH),
@@ -491,8 +488,7 @@ always @ (*) begin
     exec_rd_addr_next = exec_rd_addr;
     exec_rs1_in_next = exec_rs1_in;
     exec_rs2_in_next = exec_rs2_in;
-    exec_imm_in_next = exec_imm_in;
-    exec_addr_in_next = exec_addr_in;
+    exec_imm_addr_next = exec_imm_addr;
     exec_funct3_next = exec_funct3;
     exec_funct7_next = exec_funct7;
     if (exec_should_start) begin
@@ -503,8 +499,7 @@ always @ (*) begin
         exec_rd_addr_next = opdec_rd_addr;
         exec_rs1_in_next = opdec_rs1;
         exec_rs2_in_next = opdec_rs2;
-        exec_imm_in_next = opdec_immaddr;
-        exec_addr_in_next = opdec_immaddr;
+        exec_imm_addr_next = opdec_immaddr;
         exec_funct3_next = opdec_funct3;
         exec_funct7_next = opdec_funct7;
         opdec_en_next = 0;
@@ -572,7 +567,7 @@ always @ (posedge clk) begin
         exec_rd_addr <= 0;
         exec_rs1_in <= 0;
         exec_rs2_in <= 0;
-        exec_imm_in <= 0;
+        exec_imm_addr <= 0;
         exec_funct3 <= 0;
         exec_funct7 <= 0;
 
@@ -612,8 +607,7 @@ always @ (posedge clk) begin
         exec_rd_addr <= exec_rd_addr_next;
         exec_rs1_in <= exec_rs1_in_next;
         exec_rs2_in <= exec_rs2_in_next;
-        exec_imm_in <= exec_imm_in_next;
-        exec_addr_in <= exec_addr_in_next;
+        exec_imm_addr <= exec_imm_addr_next;
         exec_funct3 <= exec_funct3_next;
         exec_funct7 <= exec_funct7_next;
 
