@@ -30,15 +30,17 @@ module instruction_decode
 );
 
 reg [M_WIDTH-1:0] imms, immi, immb, immu, immj, imm_temp;
+reg [OP_WIDTH-1:0] op_temp;
 
 always @ (*) begin
+    op_temp = inst[6:0];
     imms = {{21{inst[31]}}, inst[30:25], inst[11:7]};
     immi = {{21{inst[31]}}, inst[30:20]};
     immb = {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
     immu = {inst[31:12], 12'b0};
     immj = {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
 
-    case (op)
+    case (op_temp)
         OP_LUI, OP_AUIPC:
             imm_temp = immu;
         OP_JAL:
@@ -65,7 +67,7 @@ always @ (posedge clk) begin
     end else begin
         ready <= en;
         if (en) begin
-            op <= inst[6:0];
+            op <= op_temp;
             funct7 <= inst[31:25];
             funct3 <= inst[14:12];
             rd_addr <= inst[11:7];

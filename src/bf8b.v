@@ -116,7 +116,7 @@ wire opdec_ready;
 reg [M_WIDTH-1:0] opdec_pc, opdec_pc_next;
 reg opdec_branch_prediction, opdec_branch_prediction_next;
 reg [OP_WIDTH-1:0] opdec_op, opdec_op_next;
-reg [M_WIDTH-1:0] opdec_imm, opdec_imm_next;
+reg [M_WIDTH-1:0] opdec_imm_in, opdec_imm_in_next;
 reg [REG_ADDR_WIDTH-1:0] opdec_rd_addr, opdec_rd_addr_next;
 reg [REG_ADDR_WIDTH-1:0] opdec_rs1_addr, opdec_rs1_addr_next, opdec_rs2_addr, opdec_rs2_addr_next;
 wire [M_WIDTH-1:0] opdec_immaddr;
@@ -144,7 +144,7 @@ operand_decode #(
     .en(opdec_en),
     .rst(rst),
     .clk(clk),
-    .imm(opdec_imm),
+    .imm(opdec_imm_in),
     .rs1_addr(opdec_rs1_addr),
     .rs2_addr(opdec_rs2_addr),
     .pc(opdec_pc),
@@ -427,7 +427,7 @@ always @ (*) begin
     opdec_en_next = opdec_en;
     opdec_pc_next = opdec_pc;
     opdec_op_next = opdec_op;
-    opdec_imm_next = opdec_imm;
+    opdec_imm_in_next = opdec_imm_in;
     opdec_rd_addr_next = opdec_rd_addr;
     opdec_rs1_addr_next = opdec_rs1_addr;
     opdec_rs2_addr_next = opdec_rs2_addr;
@@ -441,7 +441,7 @@ always @ (*) begin
                     opdec_en_next = 1;
                     opdec_pc_next = idec_pc;
                     opdec_op_next = idec_op;
-                    opdec_imm_next = idec_imm;
+                    opdec_imm_in_next = idec_imm;
                     opdec_rd_addr_next = idec_rd_addr;
                     opdec_rs1_addr_next = idec_rs1_addr;
                     opdec_rs2_addr_next = idec_rs2_addr;
@@ -459,7 +459,7 @@ always @ (*) begin
                 opdec_en_next = 1;
                 opdec_pc_next = idec_pc;
                 opdec_op_next = idec_op;
-                opdec_imm_next = idec_imm;
+                opdec_imm_in_next = idec_imm;
                 opdec_rd_addr_next = idec_rd_addr;
                 opdec_rs1_addr_next = idec_rs1_addr;
                 opdec_rs2_addr_next = idec_rs2_addr;
@@ -471,7 +471,7 @@ always @ (*) begin
                 opdec_en_next = 1;
                 opdec_pc_next = idec_pc;
                 opdec_op_next = idec_op;
-                opdec_imm_next = idec_imm;
+                opdec_imm_in_next = idec_imm;
                 opdec_rd_addr_next = idec_rd_addr;
                 opdec_rs1_addr_next = idec_rs1_addr;
                 opdec_rs2_addr_next = idec_rs2_addr;
@@ -557,7 +557,7 @@ always @ (posedge clk) begin
         opdec_en <= 0;
         opdec_pc <= 0;
         opdec_op <= 0;
-        opdec_imm <= 0;
+        opdec_imm_in <= 0;
         opdec_rd_addr <= 0;
         opdec_rs1_addr <= 0;
         opdec_rs2_addr <= 0;
@@ -597,7 +597,7 @@ always @ (posedge clk) begin
         opdec_en <= opdec_en_next;
         opdec_pc <= opdec_pc_next;
         opdec_op <= opdec_op_next;
-        opdec_imm <= opdec_imm_next;
+        opdec_imm_in <= opdec_imm_in_next;
         opdec_rd_addr <= opdec_rd_addr_next;
         opdec_rs1_addr <= opdec_rs1_addr_next;
         opdec_rs2_addr <= opdec_rs2_addr_next;
