@@ -53,6 +53,7 @@ always @ (*) begin
             client_data_ins[j] = 0;
         end
         mem_mux_holder_temp = 0;
+        mem_request = 0;
     end else begin
         mem_mux_holder_temp = 0;
         for (j = 0; j < CLIENT_CNT; j = j + 1) begin
@@ -70,11 +71,7 @@ always @ (*) begin
             end
         end
 
-        case (cycle)
-            1: mem_request = 1;
-            2: mem_request = client_requests[mem_mux_holder];
-            default: mem_request = 0;
-        endcase
+        mem_request = cycle == 1;
     end
 end
 
@@ -90,10 +87,10 @@ always @ (posedge clk) begin
         case (cycle)
             0: if (client_requests) begin
                 mem_mux_holder <= mem_mux_holder_temp;
-                mem_data_out = client_data_outs[mem_mux_holder_temp];
-                mem_addr = client_addrs[mem_mux_holder_temp];
-                mem_data_width = client_data_widths[mem_mux_holder_temp];
-                mem_we_out = client_wes[mem_mux_holder_temp];
+                mem_data_out <= client_data_outs[mem_mux_holder_temp];
+                mem_addr <= client_addrs[mem_mux_holder_temp];
+                mem_data_width <= client_data_widths[mem_mux_holder_temp];
+                mem_we_out <= client_wes[mem_mux_holder_temp];
                 cycle <= 1;
             end
             1: cycle <= mem_ready ? 2 : 1;
