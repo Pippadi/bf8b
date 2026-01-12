@@ -26,12 +26,12 @@ module branch_predictor
 
 reg [ADDR_WIDTH-1:0] inst_addr;
 wire [PREDICT_WIDTH-1:0] prediction;
-wire prediction_cache_hit;
-reg prediction_cache_we;
+reg prediction_cache_req, prediction_cache_we;
+wire prediction_cache_hit, prediction_cache_ready;
 reg result_available_reg, result_taken_reg;
 reg [ADDR_WIDTH-1:0] result_inst_addr_reg;
 
-wire [PREDICT_WIDTH-1:0] old_prediction = prediction_cache_hit ? prediction : DEFAULT_PREDICTION;
+reg [PREDICT_WIDTH-1:0] old_prediction;
 wire [PREDICT_WIDTH-1:0] new_prediction = result_taken_reg ? (old_prediction == {PREDICT_WIDTH{1'b1}} ? old_prediction : old_prediction + 1) :
     (old_prediction == {PREDICT_WIDTH{1'b0}} ? old_prediction : old_prediction - 1);
 
@@ -42,11 +42,13 @@ cache #(
 ) PredictionCache (
     .rst(rst),
     .clk(clk),
+    .req(prediction_cache_req),
     .we(prediction_cache_we),
     .addr(inst_addr),
     .data_in(new_prediction),
     .data_out(prediction),
-    .hit(prediction_cache_hit)
+    .hit(prediction_cache_hit),
+    .ready(prediction_cache_ready)
 );
 
 reg [1:0] predict_cycle;
@@ -59,24 +61,21 @@ always @ (posedge clk) begin
         take <= 0;
         predict_ready <= 0;
         adjust_cycle <= 0;
+        prediction_cache_req <= 0;
         prediction_cache_we <= 0;
+        old_prediction <= 0;
         result_available_reg <= 0;
         result_taken_reg <= 0;
         result_inst_addr_reg <= 0;
     end else begin
-        if (predict_req & (~result_available_reg | predict_cycle != 0)) begin
-            case (predict_cycle)
-                default: begin
-                    inst_addr <= inst_addr_in;
-                    predict_cycle <= 1;
-                end
-                1: begin
-                    take <= prediction_cache_hit ? prediction[PREDICT_WIDTH-1] : DEFAULT_PREDICTION[PREDICT_WIDTH-1];
-                    predict_cycle <= 2;
-                    predict_ready <= 1;
-                end
-                2: predict_cycle <= predict_req ? 0 : 2;
-            endcase
+        if (predict_req & ~result_available_reg) begin
+            if (predict_cycle == 0) begin
+                prediction_cache_req <= ~prediction_cache_ready;
+                inst_addr <= inst_addr_in;
+                predict_cycle <= prediction_cache_ready;
+                predict_ready <= prediction_cache_ready;
+                take <= prediction_cache_hit ? prediction[PREDICT_WIDTH-1] : DEFAULT_PREDICTION[PREDICT_WIDTH-1];
+            end
         end else begin
             predict_ready <= 0;
             predict_cycle <= 0;
@@ -91,17 +90,21 @@ always @ (posedge clk) begin
         if (result_available_reg & predict_cycle == 0) begin
             case (adjust_cycle)
                 0: begin
+                    prediction_cache_req <= 1;
+                    prediction_cache_we <= 0;
                     inst_addr <= result_inst_addr_reg;
                     adjust_cycle <= 1;
                 end
                 1: begin
-                    prediction_cache_we <= 1;
-                    adjust_cycle <= 2;
+                    prediction_cache_req <= ~prediction_cache_ready;
+                    adjust_cycle <= prediction_cache_ready ? 2 : 1;
+                    old_prediction <= prediction_cache_hit ? prediction : DEFAULT_PREDICTION;
                 end
-                default: begin
-                    prediction_cache_we <= 0;
-                    adjust_cycle <= 0;
-                    result_available_reg <= 0;
+                2: begin
+                    prediction_cache_req <= ~prediction_cache_ready;
+                    prediction_cache_we <= ~prediction_cache_ready;
+                    adjust_cycle <= prediction_cache_ready ? 0 : 2;
+                    result_available_reg <= ~prediction_cache_ready;
                 end
             endcase
         end else

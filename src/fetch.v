@@ -16,8 +16,13 @@ module fetch
     output reg ready
 );
 
-reg cache_we;
-wire cache_hit;
+localparam QUERY_CACHE = 2'b00;
+localparam MEM_WAIT = 2'b01;
+localparam UPDATE_CACHE = 2'b10;
+localparam DONE = 2'b11;
+
+reg cache_req, cache_we;
+wire cache_hit, cache_ready;
 wire [INST_WIDTH-1:0] cache_inst;
 
 cache #(
@@ -27,10 +32,12 @@ cache #(
 ) ICache (
     .rst(rst),
     .clk(clk),
+    .req(cache_req),
     .we(cache_we),
     .addr(pc),
     .data_in(inst_out),
     .data_out(cache_inst),
+    .ready(cache_ready),
     .hit(cache_hit)
 );
 
@@ -38,20 +45,21 @@ reg [1:0] cycle;
 
 always @ (*) begin
     mem_req = 0;
+    cache_req = 0;
     cache_we = 0;
     addr = pc;
 
-    ready = cycle == 3;
-
-    // Might cause problems if the memory interface decides to put garbage on
-    // the data in line. Not robust, but good enough for now.
-    inst_out = cache_hit ? cache_inst : data_in;
+    ready = cycle == DONE;
 
     if (~rst & en) begin
         case (cycle)
-            1: mem_req = 1;
-            2: cache_we = 1;
-            3: cache_we = 0;
+            QUERY_CACHE: cache_req = ~cache_ready;
+            MEM_WAIT: mem_req = 1;
+            UPDATE_CACHE: begin
+                cache_we = 1;
+                cache_req = ~cache_ready;
+            end
+            DONE: cache_we = 0;
         endcase
     end
 end
@@ -59,14 +67,20 @@ end
 always @ (posedge clk) begin
     if (~rst & en) begin
         case (cycle)
-            0: cycle <= cache_hit ? 2 : 1;
-            1: cycle <= mem_ready ? 2 : 1;
-            2: cycle <= 3;
+            QUERY_CACHE: begin
+                cycle <= cache_ready ? (cache_hit ? DONE : MEM_WAIT) : QUERY_CACHE;
+                inst_out <= cache_inst;
+            end
+            MEM_WAIT: begin
+                cycle <= mem_ready ? UPDATE_CACHE : MEM_WAIT;
+                inst_out <= data_in;
+            end
+            UPDATE_CACHE: cycle <= cache_ready ? UPDATE_CACHE : DONE;
         endcase
+    end else begin
+        cycle <= QUERY_CACHE;
+        inst_out <= 0;
     end
-
-    else
-        cycle <= 0;
 end
 
 endmodule

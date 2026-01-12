@@ -7,11 +7,13 @@ module cache
 (
     input rst,
     input clk,
+    input req,
     input we,
     input [ADDR_WIDTH-1:0] addr,
     input [DATA_WIDTH-1:0] data_in,
-    output [DATA_WIDTH-1:0] data_out,
-    output hit
+    output reg [DATA_WIDTH-1:0] data_out,
+    output reg ready,
+    output reg hit
 );
 
 reg [CELL_CNT-1:0] enables;
@@ -53,8 +55,7 @@ prio_enabler #(
     .enables(temp_enables)
 );
 
-assign hit = |cmp_results;
-assign data_out = hit ? reg_data[hit_idx][DATA_WIDTH-1:0] : {DATA_WIDTH{1'b0}};
+wire hit_temp = |cmp_results;
 
 integer j;
 always @ (*) begin
@@ -63,15 +64,31 @@ always @ (*) begin
 
     enables = {CELL_CNT{1'b0}};
     d_shiftin = {addr, data_in};
-    if (we)
-        enables = temp_enables;
 
-    // Shift in the requested data to make it the least aged, overwriting
-    // its old position in the cache. Only shift if the hit is not in the
-    // first position.
-    else if (hit && |temp_enables[CELL_CNT-1:1]) begin
-        d_shiftin = {addr, data_out};
-        enables = temp_enables;
+    if (req) begin
+        if (we)
+            enables = temp_enables;
+        // Shift in the requested data to make it the least aged, overwriting
+        // its old position in the cache. Only shift if the hit is not in the
+        // first position.
+        else if (hit_temp && |temp_enables[CELL_CNT-1:1]) begin
+            d_shiftin = {addr, reg_data[hit_idx][DATA_WIDTH-1:0]};
+            enables = temp_enables;
+        end
+    end
+end
+
+always @ (posedge clk) begin
+    if (rst) begin
+        data_out <= 0;
+        ready <= 0;
+        hit <= 0;
+    end else begin
+        if (req) begin
+            data_out <= hit_temp ? reg_data[hit_idx][DATA_WIDTH-1:0] : {DATA_WIDTH{1'b0}};
+            hit <= hit_temp;
+        end
+        ready <= req;
     end
 end
 
