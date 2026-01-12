@@ -71,22 +71,18 @@ fetch #(
     .ready(fetch_ready)
 );
 
-reg decode_en, decode_en_next;
-reg [INST_WIDTH-1:0] decode_inst, decode_inst_next;
-reg [M_WIDTH-1:0] decode_pc, decode_pc_next;
-reg decode_branch_prediction, decode_branch_prediction_next;
-wire decode_ready;
-wire [OP_WIDTH-1:0] decode_op;
-wire [REG_ADDR_WIDTH-1:0] decode_rd;
-wire [M_WIDTH-1:0] decode_rs1, decode_rs2;
-wire [M_WIDTH-1:0] decode_imm, decode_addr_out;
-wire [6:0] decode_funct7;
-wire [2:0] decode_funct3;
-wire [1:0] decode_state;
+reg idec_en, idec_en_next;
+wire idec_ready;
+reg [INST_WIDTH-1:0] idec_inst, idec_inst_next;
+reg [M_WIDTH-1:0] idec_pc, idec_pc_next;
+wire [OP_WIDTH-1:0] idec_op;
+wire [REG_ADDR_WIDTH-1:0] idec_rd_addr, idec_rs1_addr, idec_rs2_addr;
+wire [M_WIDTH-1:0] idec_imm;
+wire [6:0] idec_funct7;
+wire [2:0] idec_funct3;
+wire [1:0] idec_state = {idec_en, idec_ready};
 
-assign decode_state = {decode_en, decode_ready};
-
-decode #(
+instruction_decode #(
     .M_WIDTH(M_WIDTH),
     .OP_WIDTH(OP_WIDTH),
     .REG_CNT(REG_CNT),
@@ -101,21 +97,59 @@ decode #(
     .OP_BRANCH(OP_BRANCH),
     .OP_INTEGER_IMM(OP_INTEGER_IMM),
     .OP_INTEGER(OP_INTEGER)
-) Decode (
-    .en(decode_en),
+) InstructionDecode (
+    .en(idec_en),
     .clk(clk),
-    .inst(decode_inst),
-    .pc(decode_pc),
+    .inst(idec_inst),
+    .op(idec_op),
+    .rd_addr(idec_rd_addr),
+    .rs1_addr(idec_rs1_addr),
+    .rs2_addr(idec_rs2_addr),
+    .imm(idec_imm),
+    .funct7(idec_funct7),
+    .funct3(idec_funct3),
+    .ready(idec_ready)
+);
+
+reg opdec_en, opdec_en_next;
+wire opdec_ready;
+reg [M_WIDTH-1:0] opdec_pc, opdec_pc_next;
+reg opdec_branch_prediction, opdec_branch_prediction_next;
+reg [OP_WIDTH-1:0] opdec_op;
+reg [REG_ADDR_WIDTH-1:0] opdec_rd;
+wire [M_WIDTH-1:0] opdec_rs1, opdec_rs2;
+wire [M_WIDTH-1:0] opdec_immaddr;
+reg [6:0] opdec_funct7;
+reg [2:0] opdec_funct3;
+
+wire [1:0] opdec_state = {opdec_en, opdec_ready};
+
+operand_decode #(
+    .M_WIDTH(M_WIDTH),
+    .OP_WIDTH(OP_WIDTH),
+    .REG_CNT(REG_CNT),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+    .OP_LUI(OP_LUI),
+    .OP_AUIPC(OP_AUIPC),
+    .OP_JAL(OP_JAL),
+    .OP_JALR(OP_JALR),
+    .OP_LOAD(OP_LOAD),
+    .OP_STORE(OP_STORE),
+    .OP_BRANCH(OP_BRANCH),
+    .OP_INTEGER_IMM(OP_INTEGER_IMM),
+    .OP_INTEGER(OP_INTEGER)
+) OperandDecode (
+    .en(opdec_en),
+    .clk(clk),
+    .imm(opdec_imm),
+    .pc(opdec_pc),
     .reg_file_packed(reg_file_packed),
-    .op(decode_op),
-    .rd(decode_rd),
-    .rs1(decode_rs1),
-    .rs2(decode_rs2),
-    .imm(decode_imm),
-    .addr(decode_addr_out),
-    .funct7(decode_funct7),
-    .funct3(decode_funct3),
-    .ready(decode_ready)
+    .op(opdec_op),
+    .rd(opdec_rd),
+    .rs1(opdec_rs1),
+    .rs2(opdec_rs2),
+    .immaddr(opdec_imaddr),
+    .ready(opdec_ready)
 );
 
 reg exec_en, exec_en_next;
@@ -296,18 +330,23 @@ mem_if #(
 );
 
 reg fetch_should_start;
-reg decode_should_start;
+reg idec_should_start;
+reg opdec_should_start;
 reg exec_should_start;
 reg wb_should_start;
 always @ (*) begin
     fetch_should_start = fetch_state == STATE_IDLE;
 
-    decode_should_start =
+    idec_should_start =
         fetch_state == STATE_COMPLETE &&
-        decode_state == STATE_IDLE;
+        idec_state == STATE_IDLE;
+
+    opdec_should_start =
+        idec_state == STATE_COMPLETE &&
+        opdec_state == STATE_IDLE;
 
     exec_should_start =
-        decode_state == STATE_COMPLETE &&
+        opdec_state == STATE_COMPLETE &&
         exec_state == STATE_IDLE;
     // Right now, writeback only takes one cycle to execute. This means that
     // even if writeback is busy, any dependency issue will have been resolved
@@ -344,7 +383,7 @@ branch_predictor #(
     .result_taken(exec_branch)
 );
 
-reg stall_fetch, stall_fetch_next;
+reg stall_fetch_ipdec, stall_fetch_ipdec_next;
 
 always @ (*) begin
     pc_next = pc;
@@ -356,45 +395,52 @@ always @ (*) begin
         fetch_pc_next = pc;
     end
 
-    decode_en_next = decode_en;
-    stall_fetch_next = stall_fetch;
-    if (decode_state == STATE_COMPLETE && stall_fetch) begin
-        pc_next = decode_addr_out;
-        stall_fetch_next = 0;
+    idec_en_next = idec_en;
+    idec_inst_next = idec_inst;
+    idec_pc_next = idec_pc;
+    if (idec_should_start) begin
+        idec_en_next = 1;
+        idec_inst_next = fetch_inst;
+        idec_pc_next = fetch_pc;
+    end
+
+    stall_fetch_ipdec_next = stall_fetch_ipdec;
+    if (opdec_state == STATE_COMPLETE && stall_fetch_ipdec) begin
+        pc_next = opdec_immaddr;
+        stall_fetch_ipdec_next = 0;
         fetch_en_next = 0;
-        decode_en_next = 0;
-        decode_pc_next = fetch_pc;
+        idec_en_next = 0;
     end
 
     predict_req_next = 0;
-    decode_inst_next = decode_inst;
-    decode_pc_next = decode_pc;
-    decode_branch_prediction_next = decode_branch_prediction;
-    if (decode_should_start) begin
-        case (fetch_inst[OP_WIDTH-1:0])
+    opdec_en_next = opdec_en;
+    opdec_pc_next = opdec_pc;
+    opdec_branch_prediction_next = opdec_branch_prediction;
+    if (opdec_should_start) begin
+        case (idec_op)
             OP_BRANCH: begin
                 if (predict_ready) begin
-                    decode_en_next = 1;
-                    decode_inst_next = fetch_inst;
-                    decode_pc_next = fetch_pc;
-                    decode_branch_prediction_next = take_branch;
+                    opdec_en_next = 1;
+                    opdec_inst_next = fetch_inst;
+                    opdec_pc_next = fetch_pc;
+                    opdec_branch_prediction_next = take_branch;
                     if (take_branch)
-                        stall_fetch_next = 1;
+                        stall_fetch_ipdec_next = 1;
                     else
                         pc_next = pc + (INST_WIDTH / 8);
                 end else
                     predict_req_next = 1;
             end
             OP_JAL, OP_JALR: begin
-                decode_en_next = 1;
-                decode_inst_next = fetch_inst;
-                decode_pc_next = fetch_pc;
-                stall_fetch_next = 1;
+                opdec_en_next = 1;
+                opdec_inst_next = fetch_inst;
+                opdec_pc_next = fetch_pc;
+                stall_fetch_ipdec_next = 1;
             end
             default: begin
-                decode_en_next = 1;
-                decode_inst_next = fetch_inst;
-                decode_pc_next = fetch_pc;
+                opdec_en_next = 1;
+                opdec_inst_next = fetch_inst;
+                opdec_pc_next = fetch_pc;
                 fetch_en_next = 0;
                 pc_next = pc + (INST_WIDTH / 8);
             end
@@ -442,8 +488,6 @@ always @ (*) begin
         // If branching, keep execute in STATE_COMPLETE to stall and retain values
         exec_en_next = exec_branch;
 
-        // Check for misprediction. Comparing with `pc` because
-        // `decode_pc` would not have been updated yet.
         if (mispredict) begin
             fetch_en_next = 0;
             decode_en_next = 0;
@@ -464,13 +508,18 @@ always @ (posedge clk) begin
 
         fetch_en <= 0;
         fetch_pc <= 0;
-        stall_fetch <= 0;
+        stall_fetch_ipdec <= 0;
 
         predict_req <= 0;
-        decode_en <= 0;
-        decode_inst <= 0;
-        decode_pc <= 0;
-        decode_branch_prediction <= 0;
+
+        idec_en <= 0;
+        idec_inst <= 0;
+        idec_pc <= 0;
+
+        opdec_en <= 0;
+        opdec_inst <= 0;
+        opdec_pc <= 0;
+        opdec_branch_prediction <= 0;
 
         exec_en <= 0;
         exec_branch_prediction <= 0;
@@ -493,13 +542,18 @@ always @ (posedge clk) begin
 
         fetch_en <= fetch_en_next;
         fetch_pc <= fetch_pc_next;
-        stall_fetch <= stall_fetch_next;
+        stall_fetch_ipdec <= stall_fetch_ipdec_next;
 
         predict_req <= predict_req_next;
-        decode_en <= decode_en_next;
-        decode_inst <= decode_inst_next;
-        decode_pc <= decode_pc_next;
-        decode_branch_prediction <= decode_branch_prediction_next;
+
+        idec_en <= idec_en_next;
+        idec_inst <= idec_inst_next;
+        idec_pc <= idec_pc_next;
+
+        opdec_en <= opdec_en_next;
+        opdec_inst <= opdec_inst_next;
+        opdec_pc <= opdec_pc_next;
+        opdec_branch_prediction <= opdec_branch_prediction_next;
 
         exec_en <= exec_en_next;
         exec_branch_prediction <= exec_branch_prediction_next;
