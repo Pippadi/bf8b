@@ -1,4 +1,4 @@
-module operand_decode
+module decode
 #(
     parameter M_WIDTH = 8,
     parameter OP_WIDTH = 7,

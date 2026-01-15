@@ -10,9 +10,9 @@ BRAM_3_INIT = fibonacci_block3.hex
 SRC_DIR := src
 
 SRCS += $(SRC_DIR)/bf8b.v
-SRCS += $(SRC_DIR)/fetch.v
-SRCS += $(SRC_DIR)/decode/inst_decode.v
-SRCS += $(SRC_DIR)/decode/operand_decode.v
+SRCS += $(SRC_DIR)/fetch/fetch.v
+SRCS += $(SRC_DIR)/fetch/inst_decode.v
+SRCS += $(SRC_DIR)/decode.v
 SRCS += $(SRC_DIR)/branchpredict/branchpredict.v
 SRCS += $(SRC_DIR)/common/adder.v
 SRCS += $(SRC_DIR)/execute/alu.v

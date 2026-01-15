@@ -50,10 +50,12 @@ wire fetch_mem_ready;
 wire fetch_mem_req;
 wire fetch_ready;
 wire [M_WIDTH-1:0] fetch_addr;
-wire [INST_WIDTH-1:0] fetch_inst;
-wire [1:0] fetch_state;
-
-assign fetch_state = {fetch_en, fetch_ready};
+wire [OP_WIDTH-1:0] fetch_op;
+wire [REG_ADDR_WIDTH-1:0] fetch_rd_addr, fetch_rs1_addr, fetch_rs2_addr;
+wire [M_WIDTH-1:0] fetch_imm;
+wire [6:0] fetch_funct7;
+wire [2:0] fetch_funct3;
+wire [1:0] fetch_state = {fetch_en, fetch_ready};
 
 fetch #(
     .M_WIDTH(M_WIDTH),
@@ -66,67 +68,33 @@ fetch #(
     .pc(fetch_pc),
     .mem_ready(fetch_mem_ready),
     .addr(fetch_addr),
-    .inst_out(fetch_inst),
     .mem_req(fetch_mem_req),
-    .ready(fetch_ready)
+    .ready(fetch_ready),
+
+    .op(fetch_op),
+    .rd_addr(fetch_rd_addr),
+    .rs1_addr(fetch_rs1_addr),
+    .rs2_addr(fetch_rs2_addr),
+    .imm(fetch_imm),
+    .funct7(fetch_funct7),
+    .funct3(fetch_funct3)
 );
 
-reg idec_en, idec_en_next;
-wire idec_ready;
-reg [INST_WIDTH-1:0] idec_inst, idec_inst_next;
-reg [M_WIDTH-1:0] idec_pc, idec_pc_next;
-wire [OP_WIDTH-1:0] idec_op;
-wire [REG_ADDR_WIDTH-1:0] idec_rd_addr, idec_rs1_addr, idec_rs2_addr;
-wire [M_WIDTH-1:0] idec_imm;
-wire [6:0] idec_funct7;
-wire [2:0] idec_funct3;
-wire [1:0] idec_state = {idec_en, idec_ready};
+reg decode_en, decode_en_next;
+wire decode_ready;
+reg [M_WIDTH-1:0] decode_pc, decode_pc_next;
+reg decode_branch_prediction, decode_branch_prediction_next;
+reg [OP_WIDTH-1:0] decode_op, decode_op_next;
+reg [M_WIDTH-1:0] decode_imm_in, decode_imm_in_next;
+reg [REG_ADDR_WIDTH-1:0] decode_rd_addr, decode_rd_addr_next;
+reg [REG_ADDR_WIDTH-1:0] decode_rs1_addr, decode_rs1_addr_next, decode_rs2_addr, decode_rs2_addr_next;
+wire [M_WIDTH-1:0] decode_immaddr;
+wire [M_WIDTH-1:0] decode_rs1, decode_rs2;
+reg [6:0] decode_funct7, decode_funct7_next;
+reg [2:0] decode_funct3, decode_funct3_next;
+wire [1:0] decode_state = {decode_en, decode_ready};
 
-instruction_decode #(
-    .M_WIDTH(M_WIDTH),
-    .OP_WIDTH(OP_WIDTH),
-    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
-    .INST_WIDTH(INST_WIDTH),
-    .OP_LUI(OP_LUI),
-    .OP_AUIPC(OP_AUIPC),
-    .OP_JAL(OP_JAL),
-    .OP_JALR(OP_JALR),
-    .OP_LOAD(OP_LOAD),
-    .OP_STORE(OP_STORE),
-    .OP_BRANCH(OP_BRANCH),
-    .OP_INTEGER_IMM(OP_INTEGER_IMM),
-    .OP_INTEGER(OP_INTEGER)
-) InstructionDecode (
-    .rst(rst),
-    .clk(clk),
-    .en(idec_en),
-    .inst(idec_inst),
-    .op(idec_op),
-    .rd_addr(idec_rd_addr),
-    .rs1_addr(idec_rs1_addr),
-    .rs2_addr(idec_rs2_addr),
-    .imm(idec_imm),
-    .funct7(idec_funct7),
-    .funct3(idec_funct3),
-    .ready(idec_ready)
-);
-
-reg opdec_en, opdec_en_next;
-wire opdec_ready;
-reg [M_WIDTH-1:0] opdec_pc, opdec_pc_next;
-reg opdec_branch_prediction, opdec_branch_prediction_next;
-reg [OP_WIDTH-1:0] opdec_op, opdec_op_next;
-reg [M_WIDTH-1:0] opdec_imm_in, opdec_imm_in_next;
-reg [REG_ADDR_WIDTH-1:0] opdec_rd_addr, opdec_rd_addr_next;
-reg [REG_ADDR_WIDTH-1:0] opdec_rs1_addr, opdec_rs1_addr_next, opdec_rs2_addr, opdec_rs2_addr_next;
-wire [M_WIDTH-1:0] opdec_immaddr;
-wire [M_WIDTH-1:0] opdec_rs1, opdec_rs2;
-reg [6:0] opdec_funct7, opdec_funct7_next;
-reg [2:0] opdec_funct3, opdec_funct3_next;
-
-wire [1:0] opdec_state = {opdec_en, opdec_ready};
-
-operand_decode #(
+decode #(
     .M_WIDTH(M_WIDTH),
     .OP_WIDTH(OP_WIDTH),
     .REG_CNT(REG_CNT),
@@ -140,20 +108,20 @@ operand_decode #(
     .OP_BRANCH(OP_BRANCH),
     .OP_INTEGER_IMM(OP_INTEGER_IMM),
     .OP_INTEGER(OP_INTEGER)
-) OperandDecode (
-    .en(opdec_en),
+) Decode (
+    .en(decode_en),
     .rst(rst),
     .clk(clk),
-    .imm(opdec_imm_in),
-    .rs1_addr(opdec_rs1_addr),
-    .rs2_addr(opdec_rs2_addr),
-    .pc(opdec_pc),
+    .imm(decode_imm_in),
+    .rs1_addr(decode_rs1_addr),
+    .rs2_addr(decode_rs2_addr),
+    .pc(decode_pc),
     .reg_file_packed(reg_file_packed),
-    .op(opdec_op),
-    .rs1(opdec_rs1),
-    .rs2(opdec_rs2),
-    .immaddr(opdec_immaddr),
-    .ready(opdec_ready)
+    .op(decode_op),
+    .rs1(decode_rs1),
+    .rs2(decode_rs2),
+    .immaddr(decode_immaddr),
+    .ready(decode_ready)
 );
 
 reg exec_en, exec_en_next;
@@ -332,29 +300,24 @@ mem_if #(
 );
 
 reg fetch_should_start;
-reg idec_should_start;
-reg opdec_should_start;
+reg decode_should_start;
 reg exec_should_start;
 reg wb_should_start;
 always @ (*) begin
     fetch_should_start = fetch_state == STATE_IDLE;
 
-    idec_should_start =
+    decode_should_start =
         fetch_state == STATE_COMPLETE &&
-        idec_state == STATE_IDLE;
-
-    opdec_should_start =
-        idec_state == STATE_COMPLETE &&
-        opdec_state == STATE_IDLE &&
+        decode_state == STATE_IDLE &&
         !(((exec_state == STATE_COMPLETE || exec_state == STATE_BUSY) &&
-        (exec_rd_addr == idec_rs1_addr ||
-        exec_rd_addr == idec_rs2_addr)) ||
+        (exec_rd_addr == fetch_rs1_addr ||
+        exec_rd_addr == fetch_rs2_addr)) ||
         (wb_state == STATE_BUSY &&
-        (wb_rd_addr == idec_rs1_addr ||
-        wb_rd_addr == idec_rs1_addr)));
+        (wb_rd_addr == fetch_rs1_addr ||
+        wb_rd_addr == fetch_rs1_addr)));
 
     exec_should_start =
-        opdec_state == STATE_COMPLETE &&
+        decode_state == STATE_COMPLETE &&
         exec_state == STATE_IDLE;
     // Right now, writeback only takes one cycle to execute. This means that
     // even if writeback is busy, any dependency issue will have been resolved
@@ -391,7 +354,8 @@ branch_predictor #(
     .result_taken(exec_branch)
 );
 
-reg stall_fetch_idec, stall_fetch_idec_next;
+reg stall_fetch, stall_fetch_next;
+reg latch_decode_inputs;
 
 always @ (*) begin
     pc_next = pc;
@@ -403,82 +367,59 @@ always @ (*) begin
         fetch_pc_next = pc;
     end
 
-    idec_en_next = idec_en;
-    idec_inst_next = idec_inst;
-    idec_pc_next = idec_pc;
-    if (idec_should_start) begin
-        idec_en_next = 1;
-        idec_inst_next = fetch_inst;
-        idec_pc_next = fetch_pc;
-    end
-
-    stall_fetch_idec_next = stall_fetch_idec;
-    if (opdec_state == STATE_COMPLETE && stall_fetch_idec) begin
-        pc_next = opdec_immaddr;
-        stall_fetch_idec_next = 0;
+    stall_fetch_next = stall_fetch;
+    if (decode_state == STATE_COMPLETE && stall_fetch) begin
+        pc_next = decode_immaddr;
+        stall_fetch_next = 0;
         fetch_en_next = 0;
-        idec_en_next = 0;
     end
 
     predict_req_next = 0;
-    opdec_en_next = opdec_en;
-    opdec_pc_next = opdec_pc;
-    opdec_op_next = opdec_op;
-    opdec_imm_in_next = opdec_imm_in;
-    opdec_rd_addr_next = opdec_rd_addr;
-    opdec_rs1_addr_next = opdec_rs1_addr;
-    opdec_rs2_addr_next = opdec_rs2_addr;
-    opdec_funct7_next = opdec_funct7;
-    opdec_funct3_next = opdec_funct3;
-    opdec_branch_prediction_next = opdec_branch_prediction;
-    if (opdec_should_start) begin
-        case (idec_op)
+    decode_en_next = decode_en;
+    decode_pc_next = decode_pc;
+    decode_op_next = decode_op;
+    decode_imm_in_next = decode_imm_in;
+    decode_rd_addr_next = decode_rd_addr;
+    decode_rs1_addr_next = decode_rs1_addr;
+    decode_rs2_addr_next = decode_rs2_addr;
+    decode_funct7_next = decode_funct7;
+    decode_funct3_next = decode_funct3;
+    decode_branch_prediction_next = decode_branch_prediction;
+    latch_decode_inputs = 0;
+    if (decode_should_start) begin
+        case (fetch_op)
             OP_BRANCH: begin
+                predict_req_next = ~predict_ready;
                 if (predict_ready) begin
-                    opdec_en_next = 1;
-                    opdec_pc_next = idec_pc;
-                    opdec_op_next = idec_op;
-                    opdec_imm_in_next = idec_imm;
-                    opdec_rd_addr_next = idec_rd_addr;
-                    opdec_rs1_addr_next = idec_rs1_addr;
-                    opdec_rs2_addr_next = idec_rs2_addr;
-                    opdec_funct7_next = idec_funct7;
-                    opdec_funct3_next = idec_funct3;
-                    opdec_branch_prediction_next = take_branch;
+                    latch_decode_inputs = 1;
+                    decode_branch_prediction_next = take_branch;
                     if (take_branch)
-                        stall_fetch_idec_next = 1;
+                        stall_fetch_next = 1;
                     else
                         pc_next = pc + (INST_WIDTH / 8);
-                end else
-                    predict_req_next = 1;
+                end
             end
             OP_JAL, OP_JALR: begin
-                opdec_en_next = 1;
-                opdec_pc_next = idec_pc;
-                opdec_op_next = idec_op;
-                opdec_imm_in_next = idec_imm;
-                opdec_rd_addr_next = idec_rd_addr;
-                opdec_rs1_addr_next = idec_rs1_addr;
-                opdec_rs2_addr_next = idec_rs2_addr;
-                opdec_funct7_next = idec_funct7;
-                opdec_funct3_next = idec_funct3;
-                stall_fetch_idec_next = 1;
+                latch_decode_inputs = 1;
+                stall_fetch_next = 1;
             end
             default: begin
-                opdec_en_next = 1;
-                opdec_pc_next = idec_pc;
-                opdec_op_next = idec_op;
-                opdec_imm_in_next = idec_imm;
-                opdec_rd_addr_next = idec_rd_addr;
-                opdec_rs1_addr_next = idec_rs1_addr;
-                opdec_rs2_addr_next = idec_rs2_addr;
-                opdec_funct7_next = idec_funct7;
-                opdec_funct3_next = idec_funct3;
+                latch_decode_inputs = 1;
                 fetch_en_next = 0;
-                idec_en_next = 0;
                 pc_next = pc + (INST_WIDTH / 8);
             end
         endcase
+    end
+    if (latch_decode_inputs) begin
+        decode_en_next = 1;
+        decode_pc_next = fetch_pc;
+        decode_op_next = fetch_op;
+        decode_imm_in_next = fetch_imm;
+        decode_rd_addr_next = fetch_rd_addr;
+        decode_rs1_addr_next = fetch_rs1_addr;
+        decode_rs2_addr_next = fetch_rs2_addr;
+        decode_funct7_next = fetch_funct7;
+        decode_funct3_next = fetch_funct3;
     end
 
     exec_en_next = exec_en;
@@ -493,16 +434,16 @@ always @ (*) begin
     exec_funct7_next = exec_funct7;
     if (exec_should_start) begin
         exec_en_next = 1;
-        exec_branch_prediction_next = opdec_branch_prediction;
-        exec_op_next = opdec_op;
-        exec_pc_in_next = opdec_pc;
-        exec_rd_addr_next = opdec_rd_addr;
-        exec_rs1_in_next = opdec_rs1;
-        exec_rs2_in_next = opdec_rs2;
-        exec_imm_addr_next = opdec_immaddr;
-        exec_funct3_next = opdec_funct3;
-        exec_funct7_next = opdec_funct7;
-        opdec_en_next = 0;
+        exec_branch_prediction_next = decode_branch_prediction;
+        exec_op_next = decode_op;
+        exec_pc_in_next = decode_pc;
+        exec_rd_addr_next = decode_rd_addr;
+        exec_rs1_in_next = decode_rs1;
+        exec_rs2_in_next = decode_rs2;
+        exec_imm_addr_next = decode_immaddr;
+        exec_funct3_next = decode_funct3;
+        exec_funct7_next = decode_funct7;
+        decode_en_next = 0;
     end
 
     wb_en_next = wb_en;
@@ -522,8 +463,7 @@ always @ (*) begin
 
         if (mispredict) begin
             fetch_en_next = 0;
-            idec_en_next = 0;
-            opdec_en_next = 0;
+            decode_en_next = 0;
             pc_next = exec_branch ? exec_pc_out : (exec_pc_in + (INST_WIDTH / 8));
         end
     end
@@ -541,24 +481,20 @@ always @ (posedge clk) begin
 
         fetch_en <= 0;
         fetch_pc <= 0;
-        stall_fetch_idec <= 0;
+        stall_fetch <= 0;
 
         predict_req <= 0;
 
-        idec_en <= 0;
-        idec_inst <= 0;
-        idec_pc <= 0;
-
-        opdec_en <= 0;
-        opdec_pc <= 0;
-        opdec_op <= 0;
-        opdec_imm_in <= 0;
-        opdec_rd_addr <= 0;
-        opdec_rs1_addr <= 0;
-        opdec_rs2_addr <= 0;
-        opdec_funct7 <= 0;
-        opdec_funct3 <= 0;
-        opdec_branch_prediction <= 0;
+        decode_en <= 0;
+        decode_pc <= 0;
+        decode_op <= 0;
+        decode_imm_in <= 0;
+        decode_rd_addr <= 0;
+        decode_rs1_addr <= 0;
+        decode_rs2_addr <= 0;
+        decode_funct7 <= 0;
+        decode_funct3 <= 0;
+        decode_branch_prediction <= 0;
 
         exec_en <= 0;
         exec_branch_prediction <= 0;
@@ -581,24 +517,20 @@ always @ (posedge clk) begin
 
         fetch_en <= fetch_en_next;
         fetch_pc <= fetch_pc_next;
-        stall_fetch_idec <= stall_fetch_idec_next;
+        stall_fetch <= stall_fetch_next;
 
         predict_req <= predict_req_next;
 
-        idec_en <= idec_en_next;
-        idec_inst <= idec_inst_next;
-        idec_pc <= idec_pc_next;
-
-        opdec_en <= opdec_en_next;
-        opdec_pc <= opdec_pc_next;
-        opdec_op <= opdec_op_next;
-        opdec_imm_in <= opdec_imm_in_next;
-        opdec_rd_addr <= opdec_rd_addr_next;
-        opdec_rs1_addr <= opdec_rs1_addr_next;
-        opdec_rs2_addr <= opdec_rs2_addr_next;
-        opdec_funct7 <= opdec_funct7_next;
-        opdec_funct3 <= opdec_funct3_next;
-        opdec_branch_prediction <= opdec_branch_prediction_next;
+        decode_en <= decode_en_next;
+        decode_pc <= decode_pc_next;
+        decode_op <= decode_op_next;
+        decode_imm_in <= decode_imm_in_next;
+        decode_rd_addr <= decode_rd_addr_next;
+        decode_rs1_addr <= decode_rs1_addr_next;
+        decode_rs2_addr <= decode_rs2_addr_next;
+        decode_funct7 <= decode_funct7_next;
+        decode_funct3 <= decode_funct3_next;
+        decode_branch_prediction <= decode_branch_prediction_next;
 
         exec_en <= exec_en_next;
         exec_branch_prediction <= exec_branch_prediction_next;
