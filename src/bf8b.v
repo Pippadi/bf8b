@@ -39,8 +39,6 @@ localparam MEM_ACC_8 = 2'b00;
 localparam MEM_ACC_16 = 2'b01;
 localparam MEM_ACC_32 = 2'b10;
 
-wire [M_WIDTH*REG_CNT-1:0] reg_file_packed;
-
 reg [M_WIDTH-1:0] pc, pc_next;
 
 reg fetch_en, fetch_en_next;
@@ -80,6 +78,8 @@ fetch #(
     .funct3(fetch_funct3)
 );
 
+wire [M_WIDTH-1:0] wb_rs1, wb_rs2; // Output from reg file
+
 reg decode_en, decode_en_next;
 wire decode_ready;
 reg [M_WIDTH-1:0] decode_pc, decode_pc_next;
@@ -113,13 +113,13 @@ decode #(
     .rst(rst),
     .clk(clk),
     .imm(decode_imm_in),
-    .rs1_addr(decode_rs1_addr),
-    .rs2_addr(decode_rs2_addr),
     .pc(decode_pc),
     .reg_file_packed(reg_file_packed),
     .op(decode_op),
-    .rs1(decode_rs1),
-    .rs2(decode_rs2),
+    .rs1_in(wb_rs1),
+    .rs2_in(wb_rs2),
+    .rs1_out(decode_rs1),
+    .rs2_out(decode_rs2),
     .immaddr(decode_immaddr),
     .ready(decode_ready)
 );
@@ -220,9 +220,12 @@ writeback #(
     .en(wb_en),
     .op(wb_op),
     .funct3(wb_funct3),
-    .reg_addr(wb_rd_addr),
+    .rd_addr(wb_rd_addr),
+    .rs1_addr(decode_rs1_addr),
+    .rs2_addr(decode_rs2_addr),
     .val(wb_val),
-    .regs(reg_file_packed),
+    .rs1(wb_rs1),
+    .rs2(wb_rs2),
     .ready(wb_ready)
 );
 

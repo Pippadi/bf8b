@@ -22,16 +22,13 @@ module decode
     input [OP_WIDTH-1:0] op,
     input [M_WIDTH-1:0] pc,
     input [M_WIDTH-1:0] imm,
-    input [REG_ADDR_WIDTH-1:0] rs1_addr,
-    input [REG_ADDR_WIDTH-1:0] rs2_addr,
+    input [M_WIDTH-1:0] rs1_in,
+    input [M_WIDTH-1:0] rs2_in,
     output reg [M_WIDTH-1:0] immaddr,
-    output reg [M_WIDTH-1:0] rs1,
-    output reg [M_WIDTH-1:0] rs2,
+    output reg [M_WIDTH-1:0] rs1_out,
+    output reg [M_WIDTH-1:0] rs2_out,
     output reg ready
 );
-
-wire [M_WIDTH-1:0] rs1_temp = reg_file_packed[M_WIDTH*rs1_addr +: M_WIDTH];
-wire [M_WIDTH-1:0] rs2_temp = reg_file_packed[M_WIDTH*rs2_addr +: M_WIDTH];
 
 reg [M_WIDTH-1:0] aux_adder_in1, aux_adder_in2;
 wire [M_WIDTH-1:0] aux_adder_out;
@@ -48,7 +45,7 @@ adder #(
 always @ (*) begin
     case (op)
         OP_JALR, OP_LOAD, OP_STORE: begin
-            aux_adder_in1 = rs1_temp;
+            aux_adder_in1 = rs1_in;
             aux_adder_in2 = imm;
         end
         OP_JAL, OP_BRANCH: begin
@@ -64,14 +61,14 @@ end
 
 always @ (posedge clk) begin
     if (rst) begin
-        rs1 <= 0;
-        rs2 <= 0;
+        rs1_out <= 0;
+        rs2_out <= 0;
         immaddr <= 0;
         ready <= 0;
     end else begin
         if (en) begin
-            rs1 <= rs1_temp;
-            rs2 <= rs2_temp;
+            rs1_out <= rs1_in;
+            rs2_out <= rs2_in;
             immaddr <= (op == OP_JALR || op == OP_LOAD || op == OP_STORE ||
                 op == OP_JAL || op == OP_BRANCH) ? aux_adder_out : imm;
         end
