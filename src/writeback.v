@@ -44,16 +44,6 @@ endgenerate
 assign rs1 = reg_file[rs1_addr];
 assign rs2 = reg_file[rs2_addr];
 
-wire needs_writeback;
-assign needs_writeback =
-    (op == OP_LUI) ||
-    (op == OP_AUIPC) ||
-    (op == OP_JAL) ||
-    (op == OP_JALR) ||
-    (op == OP_INTEGER_IMM) ||
-    (op == OP_INTEGER) ||
-    (op == OP_LOAD);
-
 integer j;
 always @ (posedge clk) begin
     reg_file[0] <= 0;
@@ -62,7 +52,7 @@ always @ (posedge clk) begin
             reg_file[j] <= 0;
         ready <= 0;
     end else begin
-        if (en && needs_writeback && rd_addr != 0) begin
+        if (en && rd_addr != 0) begin
             // funct3[2] controls sign extension for loads
             casez ({op, funct3[1:0]})
                 {OP_LUI, 2'b??}: reg_file[rd_addr][31:12] <= val[31:12];

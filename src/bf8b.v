@@ -128,6 +128,8 @@ reg exec_en, exec_en_next;
 reg exec_branch_prediction, exec_branch_prediction_next;
 reg [OP_WIDTH-1:0] exec_op, exec_op_next;
 reg [REG_ADDR_WIDTH-1:0] exec_rd_addr, exec_rd_addr_next;
+reg [REG_ADDR_WIDTH-1:0] exec_rs1_addr, exec_rs1_addr_next;
+reg [REG_ADDR_WIDTH-1:0] exec_rs2_addr, exec_rs2_addr_next;
 reg [M_WIDTH-1:0] exec_pc_in, exec_pc_in_next;
 reg [M_WIDTH-1:0] exec_rs1_in, exec_rs1_in_next;
 reg [M_WIDTH-1:0] exec_rs2_in, exec_rs2_in_next;
@@ -229,6 +231,43 @@ writeback #(
     .ready(wb_ready)
 );
 
+wire needs_writeback, stall_decode;
+wire [M_WIDTH-1:0] fwd_exec_rs1, fwd_exec_rs2;
+wire [M_WIDTH-1:0] fwd_decode_rs1, fwd_decode_rs2;
+
+forwarder #(
+    .M_WIDTH(M_WIDTH),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+    .OP_LUI(OP_LUI),
+    .OP_AUIPC(OP_AUIPC),
+    .OP_JAL(OP_JAL),
+    .OP_JALR(OP_JALR),
+    .OP_LOAD(OP_LOAD),
+    .OP_BRANCH(OP_BRANCH),
+    .OP_INTEGER_IMM(OP_INTEGER_IMM),
+    .OP_INTEGER(OP_INTEGER),
+    .STATE_BUSY(STATE_BUSY)
+) Forwarder (
+    .exec_state(exec_state),
+    .wb_state(wb_state),
+    .decode_rs1_addr(decode_rs1_addr),
+    .decode_rs2_addr(decode_rs2_addr),
+    .decode_rs1_out(decode_rs1),
+    .decode_rs2_out(decode_rs2),
+    .exec_rs1_addr(exec_rs1_addr),
+    .exec_rs2_addr(exec_rs2_addr),
+    .exec_rd_addr(exec_rd_addr),
+    .wb_rd_addr(wb_rd_addr),
+    .exec_val_out(exec_val_out),
+    .exec_op(exec_op),
+    .exec_rs1(fwd_exec_rs1),
+    .exec_rs2(fwd_exec_rs2),
+    .decode_rs1_in(fwd_decode_rs1),
+    .decode_rs2_in(fwd_decode_rs2),
+    .stall_decode(stall_decode),
+    .needs_writeback(needs_writeback)
+);
+
 wire [M_WIDTH-1:0] uart_reg_data_in;
 wire uart_reg_ready;
 
@@ -312,23 +351,15 @@ always @ (*) begin
     decode_should_start =
         fetch_state == STATE_COMPLETE &&
         decode_state == STATE_IDLE &&
-        !(((exec_state == STATE_COMPLETE || exec_state == STATE_BUSY) &&
-        (exec_rd_addr == fetch_rs1_addr ||
-        exec_rd_addr == fetch_rs2_addr)) ||
-        (wb_state == STATE_BUSY &&
-        (wb_rd_addr == fetch_rs1_addr ||
-        wb_rd_addr == fetch_rs1_addr)));
+        !stall_decode;
 
     exec_should_start =
         decode_state == STATE_COMPLETE &&
         exec_state == STATE_IDLE;
-    // Right now, writeback only takes one cycle to execute. This means that
-    // even if writeback is busy, any dependency issue will have been resolved
-    // by the time execute actually starts.
 
     wb_should_start =
-    exec_state == STATE_COMPLETE &&
-    (wb_state == STATE_IDLE || wb_state == STATE_RESETTING);
+        exec_state == STATE_COMPLETE &&
+        wb_state == STATE_IDLE;
 end
 
 reg predict_req, predict_req_next;
@@ -430,7 +461,9 @@ always @ (*) begin
     exec_op_next = exec_op;
     exec_pc_in_next = exec_pc_in;
     exec_rd_addr_next = exec_rd_addr;
+    exec_rs1_addr_next = exec_rs1_addr;
     exec_rs1_in_next = exec_rs1_in;
+    exec_rs2_addr_next = exec_rs2_addr;
     exec_rs2_in_next = exec_rs2_in;
     exec_imm_addr_next = exec_imm_addr;
     exec_funct3_next = exec_funct3;
@@ -441,8 +474,10 @@ always @ (*) begin
         exec_op_next = decode_op;
         exec_pc_in_next = decode_pc;
         exec_rd_addr_next = decode_rd_addr;
-        exec_rs1_in_next = decode_rs1;
-        exec_rs2_in_next = decode_rs2;
+        exec_rs1_addr_next = decode_rs1_addr;
+        exec_rs1_in_next = fwd_exec_rs1;
+        exec_rs2_addr_next = decode_rs2_addr;
+        exec_rs2_in_next = fwd_exec_rs2;
         exec_imm_addr_next = decode_immaddr;
         exec_funct3_next = decode_funct3;
         exec_funct7_next = decode_funct7;
@@ -459,10 +494,10 @@ always @ (*) begin
         wb_funct3_next = exec_funct3;
         wb_rd_addr_next = exec_rd_addr;
         wb_val_next = exec_val_out;
-        wb_en_next = 1;
+        wb_en_next = needs_writeback;
 
-        // If branching, keep execute in STATE_COMPLETE to stall and retain values
-        exec_en_next = exec_branch;
+        // If branching with writeback (like JAL), keep execute in STATE_COMPLETE to stall and retain values
+        exec_en_next = exec_branch & needs_writeback;
 
         if (mispredict) begin
             fetch_en_next = 0;
@@ -504,7 +539,9 @@ always @ (posedge clk) begin
         exec_op <= 0;
         exec_pc_in <= 0;
         exec_rd_addr <= 0;
+        exec_rs1_addr <= 0;
         exec_rs1_in <= 0;
+        exec_rs2_addr <= 0;
         exec_rs2_in <= 0;
         exec_imm_addr <= 0;
         exec_funct3 <= 0;
@@ -540,7 +577,9 @@ always @ (posedge clk) begin
         exec_op <= exec_op_next;
         exec_pc_in <= exec_pc_in_next;
         exec_rd_addr <= exec_rd_addr_next;
+        exec_rs1_addr <= exec_rs1_addr_next;
         exec_rs1_in <= exec_rs1_in_next;
+        exec_rs2_addr <= exec_rs2_addr_next;
         exec_rs2_in <= exec_rs2_in_next;
         exec_imm_addr <= exec_imm_addr_next;
         exec_funct3 <= exec_funct3_next;
