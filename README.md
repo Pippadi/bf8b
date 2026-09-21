@@ -1,6 +1,7 @@
 # bf8b
 
 A simple RISC-V CPU core. Currently implements barebones `rv32i`.
+My first Verilog project. Do not use.
 
 > Formerly **B**aby's **F**irst **8**-**B**it computer
 
@@ -8,12 +9,14 @@ A simple RISC-V CPU core. Currently implements barebones `rv32i`.
 
 - 4-stage pipeline with fetch, decode, execute, and writeback
 - 32-bit data bus
-- 32-bit address bus
 - LRU Instruction cache
 - In-order execution
 - No exceptions or interrupts yet
 
 For lower-level documentation, see the README files in the [`src`](/src) directory.
+
+Tested on the ECP5-based OrangeCrab dev board with the Yosys-based FPGA flow.
+Also ran LibreLane on it just for kicks.
 
 ## Programming
 
